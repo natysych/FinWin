@@ -1,8 +1,6 @@
 aiogram==3.0.0b7
-
 aiohttp
 python-dotenv
 requests
-
 pydantic==2.5.3
 pydantic-core==2.14.6
