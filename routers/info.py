@@ -1,6 +1,5 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from keyboards.info_kb import info_keyboard
 
 router = Router()
 
@@ -11,9 +10,9 @@ async def info_cmd(message: types.Message):
         "👤 ФОП *Сич Наталія Вікторівна*\n"
         "📞 +380672899005\n"
         "🏠 м. Вишневе, вул. М. Примаченко, 25-б, кв.108\n"
-        "✉ finterra.com.ua@gmail.com\n\n"
-        "📚 *FinanceForTeens* — освітній проект компанії *Finterra*.\n"
+        "📧 finterra.com.ua@gmail.com\n\n"
+        "💼 *FinanceForTeens* — освітній проєкт компанії *Finterra*.\n"
         "ФОП 3-тя група (без ПДВ)\n\n"
-        "📄 Публічна оферта доступна за посиланням нижче:",
-        reply_markup=info_keyboard()
+        "📄 Публічна оферта доступна в головному меню (кнопка «Публічна оферта»).",
+        parse_mode="Markdown"
     )
