@@ -3,11 +3,13 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 def start_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Так!", callback_data="start_yes")],
-        [InlineKeyboardButton(text="❌ Ні, відписатись", callback_data="start_no")]
+        [InlineKeyboardButton(text="❌ Ні, відписатись", callback_data="start_no")],
+        [InlineKeyboardButton(text="📄 Публічна оферта", callback_data="offer")]
     ])
 
 def continue_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✨ Так, продовжимо", callback_data="cont_yes")],
-        [InlineKeyboardButton(text="❌ Ні, відписатись", callback_data="start_no")]
+        [InlineKeyboardButton(text="❌ Ні, відписатись", callback_data="start_no")],
+        [InlineKeyboardButton(text="📄 Публічна оферта", callback_data="offer")]
     ])
