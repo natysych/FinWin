@@ -5,10 +5,12 @@ from aiohttp import web
 
 from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
+# Routers
 from routers.start import router as start_router
 from routers.payments import router as payments_router
 from routers.survey import router as survey_router
 from routers.lessons import router as lessons_router
+from routers.info import router as info_router  # ← тепер тут і правильно
 
 
 async def main():
@@ -20,6 +22,7 @@ async def main():
     dp.include_router(payments_router)
     dp.include_router(survey_router)
     dp.include_router(lessons_router)
+    dp.include_router(info_router)
 
     # aiohttp app
     app = web.Application()
@@ -27,7 +30,7 @@ async def main():
     # Register webhook handler
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
 
-    # Setup application (shutdown, cleanup, polling off)
+    # Setup application (shutdown, cleanup)
     setup_application(app, dp, bot=bot)
 
     # Set webhook
