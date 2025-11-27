@@ -1,10 +1,8 @@
 from aiogram import Router, types
-from aiogram.filters import Command, Text
-from aiogram.filters.text import Text
+from aiogram.filters import Command
 from keyboards.start_kb import start_keyboard, continue_keyboard
 
 router = Router()
-
 
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
@@ -14,7 +12,7 @@ async def start_cmd(message: types.Message):
         reply_markup=start_keyboard()
     )
 
-@router.callback_query(Text("start_yes"))
+@router.callback_query(lambda c: c.data == "start_yes")
 async def start_yes(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "Інформація на курс розрахована на 14–19 років 📚\n..."
