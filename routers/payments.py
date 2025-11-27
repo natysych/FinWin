@@ -6,7 +6,7 @@ from liqpay import create_payment
 
 router = Router()
 
-# --- Крок 1: користувач натиснув "Продовжити" ---
+# Крок 1: користувач натиснув "Продовжити"
 @router.callback_query(Text("cont_yes"))
 async def choose_payment(callback: types.CallbackQuery):
     await callback.message.answer(
@@ -14,8 +14,7 @@ async def choose_payment(callback: types.CallbackQuery):
         reply_markup=payment_keyboard()
     )
 
-
-# --- Крок 2: Тарифи A/B/C/D ---
+# Тарифи
 @router.callback_query(Text("pay_A"))
 async def pay_A(callback: types.CallbackQuery):
     url = create_payment(1500, "Оплата тарифу A", "order_A")
