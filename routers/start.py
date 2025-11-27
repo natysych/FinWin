@@ -1,24 +1,19 @@
-from aiogram import Router, types
-from aiogram.filters import Command, Text
-from keyboards.start_kb import start_keyboard, continue_keyboard
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-router = Router()
-
-@router.message(Command("start"))
-async def start_cmd(message: types.Message):
-    await message.answer(
-        "🎉 Вітаємо! Ви підписалися на бот FinanceForTeens!\n\n"
-        "Це курс з фінансової грамотності...",
-        reply_markup=start_keyboard()
+def start_keyboard():
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Так, хочу почати 🎯", callback_data="start_yes")],
+            [InlineKeyboardButton(text="Ні, повернутися ⬅️", callback_data="start_no")],
+        ]
     )
+    return keyboard
 
-@router.callback_query(Text("start_yes"))
-async def start_yes(callback: types.CallbackQuery):
-    await callback.message.edit_text(
-        "Інформація на курс розрахована на 14–19 років 📚\n..."
+def continue_keyboard():
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Продовжити 👉", callback_data="cont_yes")],
+            [InlineKeyboardButton(text="Повернутися ⬅️", callback_data="start_no")],
+        ]
     )
-    await callback.message.answer(
-        "Продовжимо навчання?",
-        reply_markup=continue_keyboard()
-    )
-
+    return keyboard
