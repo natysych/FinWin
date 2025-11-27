@@ -1,5 +1,5 @@
 from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram.filters import Command, Text
 from aiogram.filters.text import Text
 from keyboards.start_kb import start_keyboard, continue_keyboard
 
