@@ -12,39 +12,35 @@ from routers.payments import router as payments_router
 from routers.info import router as info_router
 from routers.survey import router as survey_router
 from routers.offer import router as offer_router
+from routers.liqpay_callback import liqpay_callback
 
 
 async def main():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # --- Команди меню Telegram ---
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
-        BotCommand(command="info", description="Інфо/контакти"),
-        BotCommand(command="survey", description="Анкета перед стартом"),
+        BotCommand(command="info", description="Інфо"),
+        BotCommand(command="survey", description="Анкета"),
     ])
 
-    # --- Підключення роутерів ---
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
     dp.include_router(survey_router)
     dp.include_router(offer_router)
 
-    # --- aiohttp app ---
     app = web.Application()
 
-    # --- Register webhook handler ---
-    SimpleRequestHandler(dp, bot).register(app, path="/webhook")
+    # --- РЕЄСТРАЦІЯ LIQPAY CALLBACK ---
+    app.router.add_post("/payment/callback", liqpay_callback)
 
-    # --- Setup lifecycle ---
+    SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
-    # --- Set webhook ---
     await bot.set_webhook(WEBHOOK_URL)
-    print("🔗 Webhook set:", WEBHOOK_URL)
-    print("🤖 Bot is running...")
+    print("Webhook set:", WEBHOOK_URL)
 
     return app
 
