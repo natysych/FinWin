@@ -43,7 +43,9 @@ async def main():
 
     # --- Set webhook ---
     await bot.set_webhook(WEBHOOK_URL)
-    print("Webhook set:", WEBHOOK_URL)
+    print("🔗 Webhook set:", WEBHOOK_URL)
+
+    print("🤖 Bot is running...")
 
     return app
 
@@ -51,4 +53,3 @@ async def main():
 if __name__ == "__main__":
     app = asyncio.run(main())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
-
