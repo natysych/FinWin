@@ -1,6 +1,6 @@
-from aiogram import Router, types
-from aiogram.filters import Text
+from aiogram import Router, types, F
 from services.liqpay import create_payment
+from aiohttp import web
 
 router = Router()
 
@@ -12,20 +12,23 @@ COURSE_LINKS = {
     "D": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
 }
 
-# --- АНКЕТА ---
 SURVEY_URL = "https://forms.gle/yDwFQvB4CW5zPjNH6"
 
 
-# --- Вибір тарифу ---
-@router.callback_query(Text(startswith="pay_"))
+# --- Обробка кнопок тарифів ---
+@router.callback_query(F.data.startswith("pay_"))
 async def process_payment(callback: types.CallbackQuery):
-    tariff = callback.data.split("_")[1]  # A / B / C / D
+    tariff = callback.data.split("_")[1]
+
+    amount = {
+        "A": 1500,
+        "B": 800,
+        "C": 2000,
+        "D": 3490
+    }[tariff]
 
     pay_link = create_payment(
-        amount=1500 if tariff == "A" else
-                800 if tariff == "B" else
-                2000 if tariff == "C" else
-                3490,
+        amount=amount,
         description=f"FinanceForTeens тариф {tariff}",
         order_id=f"{tariff}_{callback.from_user.id}"
     )
@@ -35,38 +38,32 @@ async def process_payment(callback: types.CallbackQuery):
     )
 
 
-# --- LiqPay callback після оплати ---
+# --- LiqPay callback ---
 @router.post("/payment/callback")
 async def liqpay_callback(request):
-    """
-    LiqPay надсилає POST-запит після успішної оплати.
-    """
     body = await request.post()
-
-    # order_id у форматі "A_123456"
     order_id = body.get("order_id")
+
     if not order_id:
-        return web.Response(text="No order_id")
+        return web.Response(text="NO ORDER_ID")
 
-    tariff = order_id.split("_")[0]  # A/B/C/D
+    tariff, user_id = order_id.split("_")
+    user_id = int(user_id)
 
-    # --- Відповідь LiqPay має повертати 200 OK ---
     from aiogram import Bot
     from config import TOKEN
-
     bot = Bot(TOKEN)
-
-    # ID юзера всередині order_id
-    user_id = int(order_id.split("_")[1])
 
     await bot.send_message(
         user_id,
         "✅ Оплата отримана!\n"
-        "Заповніть, будь ласка, анкету, щоб ми змогли дати вам більше користі 🙌\n\n"
+        "Заповніть, будь ласка, анкету, щоб ми могли дати вам більше користі 🙌\n\n"
         f"📝 Анкета: {SURVEY_URL}",
-        reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="Готово ✔️", callback_data=f"done_{tariff}")]
-        ])
+        reply_markup=types.InlineKeyboardMarkup(
+            inline_keyboard=[
+                [types.InlineKeyboardButton(text="Готово ✔️", callback_data=f"done_{tariff}")]
+            ]
+        )
     )
 
     return web.Response(text="OK")
