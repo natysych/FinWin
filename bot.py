@@ -38,18 +38,16 @@ async def main():
     # --- Register webhook handler ---
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
 
-    # --- Setup application lifecycle ---
+    # --- Setup lifecycle ---
     setup_application(app, dp, bot=bot)
 
     # --- Set webhook ---
     await bot.set_webhook(WEBHOOK_URL)
     print("🔗 Webhook set:", WEBHOOK_URL)
-
     print("🤖 Bot is running...")
 
     return app
 
 
 if __name__ == "__main__":
-    app = asyncio.run(main())
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    web.run_app(main(), host=WEBAPP_HOST, port=WEBAPP_PORT)
