@@ -7,18 +7,28 @@ router = Router()
 # --- Хендлер команди /start ---
 @router.message(CommandStart())
 async def start_cmd(message: types.Message):
-    await message.answer(
-        "🎉 Вітаємо! Ви підписалися на бот FinanceForTeens!\n\n"
-        "Це курс з фінансової грамотності...",
-        reply_markup=start_keyboard()
+    text = (
+        "🎉 <b>Вітаємо!</b>\n"
+        "<b>Ви підписалися на бот FinanceForTeens!</b>\n\n"
+        "Це курс з фінансової грамотності..."
     )
 
-# --- Обробка кнопки “Так!” ---
+    await message.answer(
+        text,
+        reply_markup=start_keyboard(),
+        parse_mode="HTML"
+    )
+
+
+# --- Обробка кнопки “Так, хочу почати” ---
 @router.callback_query(F.data == "start_yes")
 async def start_yes(callback: types.CallbackQuery):
-    await callback.message.edit_text(
-        "Інформація на курс розрахована на 14–19 років 📚\n..."
+    text = (
+        "Інформація на курс розрахована на <b>14–19 років</b> 📚\n"
+        "..."
     )
+
+    await callback.message.edit_text(text, parse_mode="HTML")
     await callback.message.answer(
         "Продовжимо навчання?",
         reply_markup=continue_keyboard()
