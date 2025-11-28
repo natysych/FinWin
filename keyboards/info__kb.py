@@ -6,7 +6,7 @@ def info_keyboard():
             [
                 InlineKeyboardButton(
                     text="📄 Публічна оферта",
-                    url="https://natysych.github.io/FINWIN/offer.pdf"
+                    callback_data="offer"
                 )
             ]
         ]
