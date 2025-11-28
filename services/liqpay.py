@@ -12,7 +12,7 @@ def create_payment(amount, description, order_id):
         "currency": "UAH",
         "description": description,
         "order_id": order_id,
-        "sandbox": 1  # 1 = тестовий режим
+        "sandbox": 1
     }
 
     data_json = json.dumps(data)
@@ -22,5 +22,4 @@ def create_payment(amount, description, order_id):
         (LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY).encode()
     ).hexdigest()
 
-    url = f"https://www.liqpay.ua/api/3/checkout?data={data_b64}&signature={signature}"
-    return url
+    return f"https://www.liqpay.ua/api/3/checkout?data={data_b64}&signature={signature}"
