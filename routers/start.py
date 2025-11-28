@@ -1,10 +1,11 @@
 from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram.filters import CommandStart, Text
 from keyboards.start_kb import start_keyboard, continue_keyboard
 
 router = Router()
 
-@router.message(Command("start"))
+# --- Хендлер команди /start ---
+@router.message(CommandStart())
 async def start_cmd(message: types.Message):
     await message.answer(
         "🎉 Вітаємо! Ви підписалися на бот FinanceForTeens!\n\n"
@@ -12,7 +13,8 @@ async def start_cmd(message: types.Message):
         reply_markup=start_keyboard()
     )
 
-@router.callback_query(lambda c: c.data == "start_yes")
+# --- Обробка кнопки “Так, хочу почати” ---
+@router.callback_query(Text("start_yes"))
 async def start_yes(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "Інформація на курс розрахована на 14–19 років 📚\n..."
