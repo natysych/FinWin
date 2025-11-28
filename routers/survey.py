@@ -9,12 +9,11 @@ COURSE_LINKS = {
     "D": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
 }
 
-
 @router.callback_query(F.data.startswith("done_"))
 async def send_course(callback: types.CallbackQuery):
     tariff = callback.data.split("_")[1]
     link = COURSE_LINKS[tariff]
 
     await callback.message.answer(
-        "🎉 Дякуємо!\nОсь ваш доступ до курсу: 👇\n" + link
+        "🎉 Дякуємо!\nОсь ваш доступ до курсу 👇\n" + link
     )
