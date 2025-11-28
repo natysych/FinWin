@@ -12,7 +12,7 @@ def create_payment(amount, description, order_id):
         "currency": "UAH",
         "description": description,
         "order_id": order_id,
-        "sandbox": 1  # 0 → бойова версія
+        "sandbox": 1  # 1 = тестовий режим
     }
 
     data_json = json.dumps(data)
