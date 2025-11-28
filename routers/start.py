@@ -1,35 +1,26 @@
-from aiogram import Router, types, F
-from aiogram.filters import CommandStart
+from aiogram import Router, types
+from aiogram.filters import Command
 from keyboards.start_kb import start_keyboard, continue_keyboard
 
 router = Router()
 
-# --- Хендлер команди /start ---
-@router.message(CommandStart())
+@router.message(Command("start"))
 async def start_cmd(message: types.Message):
-    text = (
-        "🎉 <b>Вітаємо!</b>\n"
-        "<b>Ви підписалися на бот FinanceForTeens!</b>\n\n"
-        "Це курс з фінансової грамотності..."
-    )
-
     await message.answer(
-        text,
-        reply_markup=start_keyboard(),
-        parse_mode="HTML"
+        "🎉 Вітаємо!\n\n"
+        "Ви підписалися на FinanceForTeens — освітній бот із фінансової грамотності.\n\n"
+        "Це курс для підлітків, які хочуть розуміти гроші, створювати власні ідеї та ставати самостійними.\n\n"
+        "Ну що, цікаво?",
+        reply_markup=start_keyboard()
     )
 
 
-# --- Обробка кнопки “Так, хочу почати” ---
-@router.callback_query(F.data == "start_yes")
+@router.callback_query(lambda c: c.data == "start_yes")
 async def start_yes(callback: types.CallbackQuery):
-    text = (
-        "Інформація на курс розрахована на <b>14–19 років</b> 📚\n"
-        "..."
-    )
-
-    await callback.message.edit_text(text, parse_mode="HTML")
     await callback.message.answer(
-        "Продовжимо навчання?",
+        "📘 Інформація про курс\n\n"
+        "Курс розрахований на підлітків 14–19 років. "
+        "У ньому є фінансова грамотність, підприємництво, логіка, психологія.\n\n"
+        "Готові продовжити?",
         reply_markup=continue_keyboard()
     )
