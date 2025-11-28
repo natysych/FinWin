@@ -1,5 +1,5 @@
-from aiogram import Router, types
-from aiogram.filters import CommandStart, Text
+from aiogram import Router, types, F
+from aiogram.filters import CommandStart
 from keyboards.start_kb import start_keyboard, continue_keyboard
 
 router = Router()
@@ -13,8 +13,8 @@ async def start_cmd(message: types.Message):
         reply_markup=start_keyboard()
     )
 
-# --- Обробка кнопки “Так, хочу почати” ---
-@router.callback_query(Text("start_yes"))
+# --- Обробка кнопки “Так!” ---
+@router.callback_query(F.data == "start_yes")
 async def start_yes(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "Інформація на курс розрахована на 14–19 років 📚\n..."
