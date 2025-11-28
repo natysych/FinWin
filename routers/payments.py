@@ -1,21 +1,20 @@
 from aiogram import Router, types
-from aiogram.filters import Text
-
 from keyboards.pay_kb import payment_keyboard
 from liqpay import create_payment
 
 router = Router()
 
-# --- Крок 1: "Так, продовжимо" ---
-@router.callback_query(Text("cont_yes"))
+# --- Крок 1: користувач натиснув "Продовжити" ---
+@router.callback_query(lambda c: c.data == "cont_yes")
 async def choose_payment(callback: types.CallbackQuery):
     await callback.message.answer(
         "👇 Оберіть варіант оплати:",
         reply_markup=payment_keyboard()
     )
 
+
 # --- Крок 2: Тарифи A/B/C/D ---
-@router.callback_query(Text("pay_A"))
+@router.callback_query(lambda c: c.data == "pay_A")
 async def payment_A(callback: types.CallbackQuery):
     url = create_payment(
         amount=1500,
@@ -24,7 +23,8 @@ async def payment_A(callback: types.CallbackQuery):
     )
     await callback.message.answer(f"💳 Посилання на оплату:\n{url}")
 
-@router.callback_query(Text("pay_B"))
+
+@router.callback_query(lambda c: c.data == "pay_B")
 async def payment_B(callback: types.CallbackQuery):
     url = create_payment(
         amount=800,
@@ -33,7 +33,8 @@ async def payment_B(callback: types.CallbackQuery):
     )
     await callback.message.answer(f"💳 Посилання на оплату:\n{url}")
 
-@router.callback_query(Text("pay_C"))
+
+@router.callback_query(lambda c: c.data == "pay_C")
 async def payment_C(callback: types.CallbackQuery):
     url = create_payment(
         amount=2000,
@@ -42,7 +43,8 @@ async def payment_C(callback: types.CallbackQuery):
     )
     await callback.message.answer(f"💳 Посилання на оплату:\n{url}")
 
-@router.callback_query(Text("pay_D"))
+
+@router.callback_query(lambda c: c.data == "pay_D")
 async def payment_D(callback: types.CallbackQuery):
     url = create_payment(
         amount=3490,
