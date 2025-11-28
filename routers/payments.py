@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from keyboards.pay_kb import payment_keyboard
-from liqpay import create_payment
+from services.liqpay import create_payment
 
 router = Router()
 
