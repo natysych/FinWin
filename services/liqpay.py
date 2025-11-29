@@ -5,8 +5,7 @@ import os
 
 LIQPAY_PUBLIC_KEY = os.getenv("LIQPAY_PUBLIC_KEY")
 LIQPAY_PRIVATE_KEY = os.getenv("LIQPAY_PRIVATE_KEY")
-LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")  # /payment/callback
-LIQPAY_SERVER_URL = os.getenv("LIQPAY_SERVER_URL")  # цей можна не використовувати
+LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")  # https://.../payment/callback
 
 
 def create_payment(amount, description, order_id):
