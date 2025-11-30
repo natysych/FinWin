@@ -35,6 +35,10 @@ async def main():
     dp.include_router(unsubscribe_router)
 
     app = web.Application()
+    
+    from routers.payments import liqpay_callback
+app.router.add_post("/payment/callback", liqpay_callback)
+
 
     # LiqPay callback
     app.router.add_post("/payment/callback", liqpay_callback)
