@@ -1,22 +1,22 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 
 from keyboards.start_kb import start_keyboard, continue_keyboard
+from keyboards.pay_kb import payment_keyboard
 from services.storage import set_unsubscribed
 
 router = Router()
 
-
+# 1️⃣ /start
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     text = (
         "🎉 *Вітаємо!*\n"
-        "Ви підписалися на бот *FinanceForTeens!* \n\n"
+        "Ви підписалися на бот *FinanceForTeens*!\n\n"
         "Це курс з фінансової грамотності. Він створений для тих мрійників, "
-        "хто потребує додаткових знань та систематизації дій на шляху до реалізації своїх ідей!\n\n"
-        "Ну як, цікаво? 😊"
+        "які хочуть більше знати про гроші та впевнено рухатися до своїх цілей.\n\n"
+        "Ну як, цікаво? 😉"
     )
-
     await message.answer(
         text,
         reply_markup=start_keyboard(),
@@ -24,28 +24,56 @@ async def start_cmd(message: types.Message):
     )
 
 
-@router.callback_query(lambda c: c.data == "start_yes")
-async def intro_part_two(callback: types.CallbackQuery):
+# 2️⃣ Натиснули “✨ Так, хочу далі!”
+@router.callback_query(F.data == "start_yes")
+async def show_course_description(callback: types.CallbackQuery):
     text = (
         "Курс розрахований на підлітків 14–19 років.\n"
-        "У ньому поєднані фінансова грамотність, основи підприємництва, логіка та психологія.\n\n"
+        "У ньому поєднані фінансова грамотність, основи підприємництва, "
+        "логіка та психологія.\n\n"
         "Заняття побудовані у форматі «від простого до складного», щоб допомогти:\n"
         "• зрозуміти свої цілі\n"
         "• побачити шлях їх досягнення\n"
         "• надихнутися історіями успішних людей\n\n"
-        "Продовжимо?"
+        "Продовжимо? 👉"
     )
-
     await callback.message.edit_text(
         text,
         reply_markup=continue_keyboard()
     )
+    await callback.answer()  # закриває "годинник" на кнопці
 
 
-@router.callback_query(lambda c: c.data == "start_no")
-async def unsubscribe(callback: types.CallbackQuery):
-    set_unsubscribed(callback.from_user.id, True)
-
-    await callback.message.answer(
-        "Добре! Якщо передумаєте — просто натисніть або напишіть /start 😊"
+# 3️⃣ Натиснули “👉 Так, продовжимо!” — переходимо до тарифів
+@router.callback_query(F.data == "cont_yes")
+async def continue_after_intro(callback: types.CallbackQuery):
+    text = (
+        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n\n"
+        "💎 *A) Повна оплата — 1500 грн*\n"
+        "Курс з 12 уроків, доступ назавжди.\n\n"
+        "💳 *B) Оплата частинами — 800 грн*\n"
+        "Доступ до перших 6 уроків відкривається одразу після платежу.\n\n"
+        "🔥 *C) PRO доступ — 2000 грн*\n"
+        "Повний курс + менторський супровід 1 місяць.\n\n"
+        "👑 *D) MAX-програма — 3490 грн*\n"
+        "Повний курс + додаткові модулі + спільнота + фідбек.\n\n"
+        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу. 💛"
     )
+    await callback.message.edit_text(
+        text,
+        reply_markup=payment_keyboard(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+# 4️⃣ Натиснули “❌ Ні, відписатись”
+@router.callback_query(F.data == "start_no")
+async def unsubscribe(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    set_unsubscribed(user_id, True)
+
+    await callback.message.edit_text(
+        "Добре! Якщо передумаєте — просто напишіть /start 🧡"
+    )
+    await callback.answer("Ви відписалися від бота.")
