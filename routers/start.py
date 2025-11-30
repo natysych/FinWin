@@ -2,7 +2,6 @@ from aiogram import Router, types
 from aiogram.filters import Command
 
 from keyboards.start_kb import start_keyboard, continue_keyboard
-from keyboards.pay_kb import payment_type_keyboard
 from services.storage import set_unsubscribed
 
 router = Router()
