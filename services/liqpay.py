@@ -1,11 +1,37 @@
+import os
+import json
+import time
 import base64
 import hashlib
-import json
-
-from config import LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY, LIQPAY_RESULT_URL
 
 
-def create_payment(amount, description, order_id):
+LIQPAY_PUBLIC_KEY = os.getenv("LIQPAY_PUBLIC_KEY")
+LIQPAY_PRIVATE_KEY = os.getenv("LIQPAY_PRIVATE_KEY")
+LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")  # можна лишити як у тебе
+# SERVER_URL зараз не використовуємо обов'язково
+
+
+def _encode_data(data: dict) -> str:
+    """Серіалізація даних LiqPay у base64."""
+    data_json = json.dumps(data)
+    return base64.b64encode(data_json.encode()).decode()
+
+
+def _create_signature(data_b64: str) -> str:
+    """Створення підпису LiqPay згідно їх документації."""
+    sign_str = f"{LIQPAY_PRIVATE_KEY}{data_b64}{LIQPAY_PRIVATE_KEY}"
+    sha1 = hashlib.sha1(sign_str.encode()).digest()
+    return base64.b64encode(sha1).decode()
+
+
+def create_payment_link(amount: int, description: str, order_id: str) -> str:
+    """
+    Створює посилання на сторінку оплати LiqPay.
+
+    amount – сума в грн
+    description – опис платежу
+    order_id – унікальний ID замовлення
+    """
     data = {
         "public_key": LIQPAY_PUBLIC_KEY,
         "version": "3",
@@ -14,18 +40,11 @@ def create_payment(amount, description, order_id):
         "currency": "UAH",
         "description": description,
         "order_id": order_id,
-        "sandbox": 1,  # тестовий режим
-        "result_url": LIQPAY_RESULT_URL,  # куди повертаємо юзера після оплати
-        "server_url": LIQPAY_RESULT_URL,  # куди LiqPay шле callback
+        "result_url": LIQPAY_RESULT_URL,
+        "sandbox": 1,  # 1 = тестовий режим; 0 = бойовий
     }
 
-    json_data = json.dumps(data)
-    data_b64 = base64.b64encode(json_data.encode()).decode()
+    data_b64 = _encode_data(data)
+    signature = _create_signature(data_b64)
 
-    # Правильний підпис для LiqPay: base64( sha1( private + data + private ) )
-    to_sign = LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY
-    sha1_hash = hashlib.sha1(to_sign.encode()).digest()
-    signature = base64.b64encode(sha1_hash).decode()
-
-    # URL на оплату
     return f"https://www.liqpay.ua/api/3/checkout?data={data_b64}&signature={signature}"
