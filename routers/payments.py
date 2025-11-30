@@ -7,27 +7,47 @@ router = Router()
 
 @router.callback_query(F.data.startswith("pay_"))
 async def process_payment(callback: types.CallbackQuery):
-    tariff = callback.data.split("_")[1]  # A / B / C / D
+    """
+    Користувач обрав тариф A/B/C/D.
+    Створюємо order_id, генеруємо LiqPay-лінк,
+    показуємо кнопку "Перейти до оплати", без сирого посилання в тексті.
+    """
+    tariff = callback.data.split("_")[1]  # "A" / "B" / "C" / "D"
 
-    amount = {
+    amount_map = {
         "A": 1500,
         "B": 800,
         "C": 2000,
         "D": 3490,
-    }[tariff]
+    }
 
+    amount = amount_map[tariff]
     user_id = callback.from_user.id
-    # Запам’ятовуємо, який тариф оплатив користувач
+
+    # Запам’ятовуємо тариф користувача
     set_tariff_for_user(user_id, tariff)
-    # Він вже не в статусі unsubscribed
     set_unsubscribed(user_id, False)
+
+    order_id = f"{tariff}_{user_id}"
 
     pay_link = create_payment(
         amount=amount,
         description=f"FinanceForTeens тариф {tariff}",
-        order_id=f"{tariff}_{user_id}",
+        order_id=order_id,
+    )
+
+    keyboard = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(
+                    text="Перейти до оплати в LiqPay 💳",
+                    url=pay_link,
+                )
+            ]
+        ]
     )
 
     await callback.message.answer(
-        f"💳 Натисніть, щоб сплатити тариф {tariff}:\n{pay_link}"
+        f"Щоб оплатити тариф {tariff}, натисніть кнопку нижче 👇",
+        reply_markup=keyboard,
     )
