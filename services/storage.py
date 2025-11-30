@@ -21,6 +21,10 @@ def _save(data: dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+# -----------------------
+#  UNSUBSCRIBE STORAGE
+# -----------------------
+
 def set_unsubscribed(user_id: int, value: bool):
     data = _load()
     uid = str(user_id)
@@ -30,21 +34,4 @@ def set_unsubscribed(user_id: int, value: bool):
     _save(data)
 
 
-def get_unsubscribed_user_ids():
-    data = _load()
-    return [int(uid) for uid, user in data.items() if user.get("unsubscribed")]
-
-
-def set_tariff_for_user(user_id: int, tariff: str):
-    data = _load()
-    uid = str(user_id)
-    user = data.get(uid, {})
-    user["tariff"] = tariff
-    data[uid] = user
-    _save(data)
-
-
-def get_tariff_for_user(user_id: int):
-    data = _load()
-    uid = str(user_id)
-    return data.get(uid, {}).get("tariff")
+def get_unsubscribed_
