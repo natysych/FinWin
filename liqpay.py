@@ -19,15 +19,13 @@ def create_payment(amount, description, order_id):
         "order_id": order_id,
         "result_url": os.getenv("LIQPAY_RESULT_URL"),
         "server_url": os.getenv("LIQPAY_SERVER_URL"),
-        "sandbox": 1  # 0 = бойова оплата
+        "sandbox": 1
     }
 
     data_json = json.dumps(data)
     data_b64 = base64.b64encode(data_json.encode()).decode()
 
-    sign_string = LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY
-    signature = base64.b64encode(hashlib.sha1(sign_string.encode()).digest()).decode()
+    to_sign = LIQPAY_PRIVATE_KEY + data_b64 + LIQPAY_PRIVATE_KEY
+    signature = base64.b64encode(hashlib.sha1(to_sign.encode()).digest()).decode()
 
-    payment_url = f"https://www.liqpay.ua/api/3/checkout?data={data_b64}&signature={signature}"
-
-    return payment_url
+    return f"https://www.liqpay.ua/api/3/checkout?data={data_b64}&signature={signature}"
