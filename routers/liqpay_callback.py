@@ -11,11 +11,15 @@ SURVEY_TEXT = (
 
 
 async def liqpay_callback(request: web.Request):
+    """
+    Сюди LiqPay надсилає POST-запит після оплати.
+    URL: /payment/callback (має збігатися з LIQPAY_RESULT_URL)
+    """
     data = await request.post()
 
     order_id = data.get("order_id")
     if not order_id:
-        return web.Response(text="NO ORDER_ID")
+        return web.Response(text="NO_ORDER_ID")
 
     try:
         tariff, user_id_str = order_id.split("_")
@@ -23,7 +27,7 @@ async def liqpay_callback(request: web.Request):
     except Exception:
         return web.Response(text="BAD_ORDER_ID")
 
-    # Статус — оплатив, тариф знаємо
+    # Перезаписуємо/підтверджуємо тариф
     set_tariff_for_user(user_id, tariff)
     set_unsubscribed(user_id, False)
 
