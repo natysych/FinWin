@@ -9,10 +9,7 @@ WEBHOOK_URL = f"{DOMAIN}{WEBHOOK_PATH}"
 WEBAPP_HOST = "0.0.0.0"
 WEBAPP_PORT = int(os.getenv("PORT", 8000))
 
+# --- LiqPay ---
 LIQPAY_PUBLIC_KEY = os.getenv("LIQPAY_PUBLIC_KEY")
 LIQPAY_PRIVATE_KEY = os.getenv("LIQPAY_PRIVATE_KEY")
-
-LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")
-LIQPAY_SERVER_URL = os.getenv("LIQPAY_SERVER_URL")
-
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")  # повний URL до /payment/callback
