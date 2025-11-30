@@ -20,7 +20,6 @@ async def choose_payment(callback: types.CallbackQuery):
 async def process_payment(callback: types.CallbackQuery):
     tariff = callback.data.split("_")[1].upper()
 
-    # Записуємо тариф в базу
     set_tariff_for_user(callback.from_user.id, tariff)
 
     amounts = {
@@ -30,17 +29,16 @@ async def process_payment(callback: types.CallbackQuery):
         "D": 3490
     }
 
-    amount = amounts.get(tariff, 100)
+    amount = amounts.get(tariff, 0)
     order_id = f"{callback.from_user.id}_{tariff}"
 
-    url = create_payment(
+    payment_url = create_payment(
         amount=amount,
         description=f"FinanceForTeens — тариф {tariff}",
         order_id=order_id
     )
 
     await callback.message.answer(
-        f"💳 Натисніть кнопку, щоб оплатити тариф {tariff}:\n\n{url}"
+        f"💳 Натисніть кнопку, щоб оплатити тариф {tariff}:\n{payment_url}"
     )
-
     await callback.answer()
