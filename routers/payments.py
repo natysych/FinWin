@@ -1,10 +1,10 @@
 from aiogram import Router, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from keyboards.pay_kb import payment_keyboard
 from services.storage import set_tariff_for_user
 from liqpay import create_payment
 
 router = Router()
-
 
 TARIFF_NAMES = {
     "A": "Повна оплата — 12 уроків",
@@ -13,14 +13,26 @@ TARIFF_NAMES = {
     "D": "MAX програма — 6 місяців + бонуси"
 }
 
+AMOUNTS = {
+    "A": 1500,
+    "B": 800,
+    "C": 2000,
+    "D": 3490
+}
+
 
 @router.callback_query(lambda c: c.data == "cont_yes")
 async def choose_payment(callback: types.CallbackQuery):
     await callback.message.answer(
-        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n"
-        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
+        "👇 Оберіть формат навчання, що підходить вам найбільше.\n"
+        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу."
+    )
+
+    await callback.message.answer(
+        "Оберіть тариф:",
         reply_markup=payment_keyboard()
     )
+
     await callback.answer()
 
 
@@ -31,28 +43,27 @@ async def process_payment(callback: types.CallbackQuery):
     # Зберігаємо тариф
     set_tariff_for_user(callback.from_user.id, tariff)
 
-    # Суми тарифа
-    amounts = {
-        "A": 1500,
-        "B": 800,
-        "C": 2000,
-        "D": 3490
-    }
-
-    amount = amounts.get(tariff, 0)
-    tariff_name = TARIFF_NAMES.get(tariff, "Обраний тариф")
-
+    amount = AMOUNTS.get(tariff)
     order_id = f"{callback.from_user.id}_{tariff}"
 
     payment_url = create_payment(
         amount=amount,
-        description=f"{tariff_name} ({tariff})",
+        description=f"{TARIFF_NAMES[tariff]} ({tariff})",
         order_id=order_id
     )
 
-    await callback.message.answer(
-        f"💳 *{tariff_name}*\n\n"
-        f"Натисніть, щоб оплатити тариф **{tariff}**:\n{payment_url}",
-        parse_mode="Markdown"
+    # КНОПКА З ЗОВНІШНІМ ПОСИЛАННЯМ
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💳 Оплатити", url=payment_url)]
+        ]
     )
+
+    await callback.message.answer(
+        f"💳 *{TARIFF_NAMES[tariff]}*\n\n"
+        f"Натисніть кнопку нижче, щоб перейти до оплати.",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
     await callback.answer()
