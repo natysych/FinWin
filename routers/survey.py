@@ -21,7 +21,7 @@ async def survey_cmd(message: types.Message):
         "Коли заповните анкету — натисніть кнопку «Готово» нижче.",
         reply_markup=types.InlineKeyboardMarkup(
             inline_keyboard=[
-                [types.InlineKeyboardButton(text="Готово", callback_data="survey_done")]
+                [types.InlineKeyboardButton(text="Готово ✔️", callback_data="survey_done")]
             ]
         ),
     )
@@ -41,7 +41,7 @@ async def survey_done(callback: types.CallbackQuery):
     link = COURSE_LINKS[tariff]
 
     await callback.message.answer(
-        "Дякуємо за відповіді! ❤️\n\n"
+        "Дякуємо за відповіді! ❤️\n"
         "Ось ваше посилання на курс:\n"
         f"👉 {link}"
     )
