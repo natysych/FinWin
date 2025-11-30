@@ -1,5 +1,4 @@
 from aiogram import Router, types
-from aiogram.filters import Text
 from keyboards.pay_kb import payment_keyboard
 from services.storage import set_tariff_for_user
 from liqpay import create_payment
@@ -7,20 +6,21 @@ from liqpay import create_payment
 router = Router()
 
 
-@router.callback_query(Text("cont_yes"))
+@router.callback_query(lambda c: c.data == "cont_yes")
 async def choose_payment(callback: types.CallbackQuery):
     await callback.message.answer(
         "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n"
         "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
         reply_markup=payment_keyboard()
     )
+    await callback.answer()
 
 
-@router.callback_query(Text(startswith="pay_"))
+@router.callback_query(lambda c: c.data.startswith("pay_"))
 async def process_payment(callback: types.CallbackQuery):
     tariff = callback.data.split("_")[1].upper()
 
-    # Записуємо тариф користувача
+    # Записуємо тариф в базу
     set_tariff_for_user(callback.from_user.id, tariff)
 
     amounts = {
@@ -30,8 +30,8 @@ async def process_payment(callback: types.CallbackQuery):
         "D": 3490
     }
 
-    order_id = f"{callback.from_user.id}_{tariff}"
     amount = amounts.get(tariff, 100)
+    order_id = f"{callback.from_user.id}_{tariff}"
 
     url = create_payment(
         amount=amount,
@@ -40,8 +40,7 @@ async def process_payment(callback: types.CallbackQuery):
     )
 
     await callback.message.answer(
-        f"💳 Натисніть кнопку, щоб оплатити тариф {tariff}:\n\n"
-        f"{url}"
+        f"💳 Натисніть кнопку, щоб оплатити тариф {tariff}:\n\n{url}"
     )
 
     await callback.answer()
