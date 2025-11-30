@@ -6,7 +6,6 @@ from aiohttp import web
 
 from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
-# Routers
 from routers.start import router as start_router
 from routers.payments import router as payments_router
 from routers.info import router as info_router
@@ -37,18 +36,16 @@ async def main():
 
     app = web.Application()
 
-    # LiqPay callback route
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Telegram Webhook
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
     await bot.set_webhook(WEBHOOK_URL)
-    print("🔗 Webhook set:", WEBHOOK_URL)
+    print("Webhook set:", WEBHOOK_URL)
 
     asyncio.create_task(reminders_loop(bot))
-    print("⏰ Reminders loop started")
+    print("Reminders loop started")
 
     return app
 
