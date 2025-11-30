@@ -1,45 +1,47 @@
-@router.post("/payment/callback")
-async def liqpay_callback(request: web.Request):
-    try:
-        form = await request.post()
-        data_b64 = form.get("data")
-        signature = form.get("signature")
+from aiogram import Router, types
+from aiogram.filters import Text
+from keyboards.pay_kb import payment_keyboard
+from services.storage import set_tariff_for_user
+from liqpay import create_payment
 
-        if not data_b64 or not signature:
-            return web.Response(text="no data")
+router = Router()
 
-        # Validate signature
-        check = hashlib.sha1(f"{LIQPAY_PRIVATE_KEY}{data_b64}{LIQPAY_PRIVATE_KEY}".encode()).digest()
-        check_b64 = base64.b64encode(check).decode()
 
-        if check_b64 != signature:
-            return web.Response(text="invalid signature")
+@router.callback_query(Text("cont_yes"))
+async def choose_payment(callback: types.CallbackQuery):
+    await callback.message.answer(
+        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n"
+        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
+        reply_markup=payment_keyboard()
+    )
 
-        # Decode data
-        data_json = base64.b64decode(data_b64).decode()
-        data = json.loads(data_json)
 
-        status = data.get("status")
-        user_id = int(data.get("order_id").split("_")[0])
-        tariff = data.get("order_id").split("_")[1]
+@router.callback_query(Text(startswith="pay_"))
+async def process_payment(callback: types.CallbackQuery):
+    tariff = callback.data.split("_")[1].upper()
 
-        if status == "success":
-            set_tariff_for_user(user_id, tariff)
+    # Записуємо тариф користувача
+    set_tariff_for_user(callback.from_user.id, tariff)
 
-            await bot.send_message(
-                user_id,
-                "🎉 *Оплату отримано!*\n\n"
-                "Тепер заповніть анкету, щоб ми могли створити ще кращий продукт для вас!",
-                parse_mode="Markdown"
-            )
+    amounts = {
+        "A": 1500,
+        "B": 800,
+        "C": 2000,
+        "D": 3490
+    }
 
-            await bot.send_message(
-                user_id,
-                "📝 *Анкета:* https://forms.gle/yDwFQvB4CW5zPjNH6",
-                parse_mode="Markdown"
-            )
+    order_id = f"{callback.from_user.id}_{tariff}"
+    amount = amounts.get(tariff, 100)
 
-        return web.Response(text="ok")
+    url = create_payment(
+        amount=amount,
+        description=f"FinanceForTeens — тариф {tariff}",
+        order_id=order_id
+    )
 
-    except Exception as e:
-        return web.Response(text=f"error: {e}")
+    await callback.message.answer(
+        f"💳 Натисніть кнопку, щоб оплатити тариф {tariff}:\n\n"
+        f"{url}"
+    )
+
+    await callback.answer()
