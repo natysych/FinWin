@@ -13,35 +13,29 @@ COURSE_LINKS = {
     "D": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
 }
 
-
 @router.message(Command("survey"))
 async def survey_cmd(message: types.Message):
     await message.answer(
         f"📝 Анкета: {SURVEY_URL}\n\n"
-        "Коли заповните анкету — натисніть кнопку «Готово» нижче.",
+        "Після заповнення натисніть кнопку «Готово ✔️» нижче.",
         reply_markup=types.InlineKeyboardMarkup(
-            inline_keyboard=[
-                [types.InlineKeyboardButton(text="Готово ✔️", callback_data="survey_done")]
-            ]
-        ),
+            inline_keyboard=[[types.InlineKeyboardButton(text="✔️ Готово", callback_data="survey_done")]]
+        )
     )
-
 
 @router.callback_query(F.data == "survey_done")
 async def survey_done(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     tariff = get_tariff_for_user(user_id)
 
-    if not tariff or tariff not in COURSE_LINKS:
-        await callback.message.answer(
-            "Не вдалося визначити ваш тариф. Якщо помилка повторюється — напишіть, будь ласка, адміністратору."
-        )
+    if not tariff:
+        await callback.message.answer("Не вдалося знайти ваш тариф. Напишіть адміністратору 🙏")
         return
 
     link = COURSE_LINKS[tariff]
 
     await callback.message.answer(
-        "Дякуємо за відповіді! ❤️\n"
+        "❤️ Дякуємо за відповіді!\n\n"
         "Ось ваше посилання на курс:\n"
         f"👉 {link}"
     )
