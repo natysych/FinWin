@@ -9,11 +9,11 @@ from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 # Routers
 from routers.start import router as start_router
 from routers.payments import router as payments_router
-from routers.liqpay_callback import liqpay_callback
 from routers.info import router as info_router
 from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
+from routers.liqpay_callback import liqpay_callback
 
 from services.reminders import reminders_loop
 
@@ -22,14 +22,14 @@ async def main():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Telegram menu commands
+    # --- Меню Telegram ---
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інфо"),
         BotCommand(command="survey", description="Анкета"),
     ])
 
-    # Routers
+    # --- Підключення роутерів ---
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -37,21 +37,21 @@ async def main():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # App
+    # --- Aiohttp app ---
     app = web.Application()
 
-    # LiqPay callback
+    # --- LiqPay callback маршрут ---
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Telegram webhook callback
+    # --- Telegram webhook ---
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
-    # Set webhook
+    # --- Встановити Webhook ---
     await bot.set_webhook(WEBHOOK_URL)
     print("🔗 Webhook set:", WEBHOOK_URL)
 
-    # Start reminders
+    # --- Запуск нагадувань ---
     asyncio.create_task(reminders_loop(bot))
     print("⏰ Reminders loop started")
 
