@@ -13,8 +13,6 @@ from routers.info import router as info_router
 from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
-from routers.liqpay_callback import liqpay_callback
-
 
 # Background tasks
 from services.reminders import reminders_loop
@@ -41,9 +39,6 @@ async def main():
 
     # WebApp
     app = web.Application()
-
-    # LiqPay callback route
-    app.router.add_post("/payment/callback", liqpay_callback)
 
     # Telegram webhook route
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
