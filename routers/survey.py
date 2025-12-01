@@ -13,7 +13,10 @@ COURSE_LINKS = {
 }
 
 
-@router.message(commands=["survey"])
+from aiogram.filters import Command
+
+@router.message(Command("survey"))
+
 async def survey_start(message: types.Message):
     await message.answer(
         "🎉 Оплату отримано!\n"
