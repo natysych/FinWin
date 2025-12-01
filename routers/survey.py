@@ -1,5 +1,5 @@
-from aiogram import Router, types
-from aiogram.filters import Command, Text
+from aiogram import Router, types, F
+from aiogram.filters import Command
 from services.storage import get_tariff_for_user
 
 router = Router()
@@ -28,7 +28,7 @@ async def survey_start(message: types.Message):
     )
 
 
-@router.message(Text("Готово"))
+@router.message(F.text == "Готово")
 async def send_course(message: types.Message):
     tariff = get_tariff_for_user(message.from_user.id)
 
