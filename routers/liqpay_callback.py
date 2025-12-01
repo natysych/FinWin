@@ -1,37 +1,32 @@
 from aiohttp import web
-from aiogram import Bot
-from config import TOKEN
-from services.storage import set_tariff_for_user, set_unsubscribed
+import json
 
-SURVEY_TEXT = (
-    "🎉 Оплату отримано!\n"
-    "Тепер заповніть анкету, щоб ми могли створити ще краще продукт для вас!\n\n"
-    "📝 Заповнити анкету → /survey"
-)
+from services.storage import set_tariff_for_user
 
 
 async def liqpay_callback(request: web.Request):
-    """
-    Сюди LiqPay надсилає POST-запит після оплати.
-    URL: /payment/callback (має збігатися з LIQPAY_RESULT_URL)
-    """
-    data = await request.post()
-
-    order_id = data.get("order_id")
-    if not order_id:
-        return web.Response(text="NO_ORDER_ID")
+    body = await request.post()
+    data_b64 = body.get("data")
+    if not data_b64:
+        return web.Response(text="No data")
 
     try:
-        tariff, user_id_str = order_id.split("_")
-        user_id = int(user_id_str)
+        data_json = json.loads(base64.b64decode(data_b64).decode("utf-8"))
     except Exception:
-        return web.Response(text="BAD_ORDER_ID")
+        return web.Response(text="Bad data")
 
-    # Перезаписуємо/підтверджуємо тариф
-    set_tariff_for_user(user_id, tariff)
-    set_unsubscribed(user_id, False)
+    order_id = data_json.get("order_id")
+    status = data_json.get("status")
+    user_id = data_json.get("sender_phone") or None
 
-    bot = Bot(TOKEN)
-    await bot.send_message(user_id, SURVEY_TEXT)
+    if status == "success" and order_id:
+        # order_id format: USERID_TARIFF
+        try:
+            uid_str, tariff = order_id.split("_")
+            uid = int(uid_str)
+
+            set_tariff_for_user(uid, tariff)
+        except:
+            pass
 
     return web.Response(text="OK")
