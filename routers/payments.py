@@ -8,7 +8,6 @@ import json
 from services.liqpay import create_payment_link
 from services.storage import set_tariff_for_user
 
-
 router = Router()
 
 # ---- ТАРИФИ ----
@@ -29,10 +28,9 @@ async def pay_handler(callback: CallbackQuery):
     info = TARIFFS[tariff]
 
     # Унікальний order_id
-    # 👇 Дуже важливо: user_id всередині!
     order_id = f"{callback.from_user.id}_{int(time.time())}_{tariff}"
 
-    # Зберегти тариф у локальну базу
+    # Зберегти тариф
     set_tariff_for_user(callback.from_user.id, tariff)
 
     # Створити лінк LiqPay
@@ -42,7 +40,6 @@ async def pay_handler(callback: CallbackQuery):
         order_id=order_id
     )
 
-    # Відповідь користувачу
     await callback.message.answer(
         f"💎 *Тариф {tariff} — {info['name']}*\n\n"
         f"🔗 Для оплати перейдіть за посиланням:\n{link}",
@@ -53,20 +50,14 @@ async def pay_handler(callback: CallbackQuery):
 
 
 # -----------------------------------------------------------
-# 👉 CALLBACK LiqPay → запуск логіки оплати
+# 👉 CALLBACK LiqPay — обробка успішної оплати
 # -----------------------------------------------------------
 async def liqpay_callback(request: web.Request):
-    """
-    LiqPay надсилає POST { data, signature }
-    Ми перевіряємо статус і оновлюємо користувача.
-    """
     try:
         payload = await request.post()
+        print("🔥 CALLBACK RECEIVED:", payload)
 
         lp_data = payload.get("data")
-        lp_sign = payload.get("signature")
-
-        print("🔥 CALLBACK RECEIVED:", payload)
 
         if not lp_data:
             return web.Response(text="no data")
@@ -78,41 +69,36 @@ async def liqpay_callback(request: web.Request):
 
         print("🔥 ORDER:", order_id, "| STATUS:", status)
 
-          # Якщо оплата успішна — відправляємо юзеру повідомлення
-    if status in ("success", "sandbox"):
-        try:
-            # order_id має формат "503376706_176460689_B"
-            parts = order_id.split("_")
-            user_id = int(parts[0])
-            tariff = parts[2]
+        # Якщо оплата успішна — відправляємо юзеру повідомлення
+        if status in ("success", "sandbox"):
+            try:
+                parts = order_id.split("_")
+                user_id = int(parts[0])
+                tariff = parts[2]
 
-            # Зберігаємо тариф
-            set_tariff_for_user(user_id, tariff)
-            print("✅ Tariff saved for user:", user_id, tariff)
+                # Зберегти тариф
+                set_tariff_for_user(user_id, tariff)
+                print("✅ Tariff saved for user:", user_id, tariff)
 
-            # ---- Відправляємо повідомлення користувачу в Telegram ----
-            from aiogram import Bot
-            from config import TOKEN
+                # Відправити повідомлення користувачу
+                from aiogram import Bot
+                from config import TOKEN
 
-            bot = Bot(token=TOKEN)
+                bot = Bot(token=TOKEN)
 
-            await bot.send_message(
-                user_id,
-                "🎉 *Оплату отримано!*\n\n"
-                "Будь ласка, заповніть коротку анкету, щоб ми могли дати вам максимальну користь 💛\n\n"
-                "📝 Анкета: https://forms.gle/yDwFQvB4CW5zPjNH6\n\n"
-                "Коли закінчите — натисніть *Готово* або введіть /survey",
-                parse_mode="Markdown"
-            )
+                await bot.send_message(
+                    user_id,
+                    "🎉 *Оплату отримано!*\n\n"
+                    "Будь ласка, заповніть коротку анкету, щоб ми могли дати вам максимальну користь 💛\n\n"
+                    "📝 Анкета: https://forms.gle/yDwFQvB4CW5zPjNH6\n\n"
+                    "Коли заповните — натисніть *Готово* або введіть /survey",
+                    parse_mode="Markdown"
+                )
 
-            await bot.session.close()
-
-        except Exception as e:
-            print("❌ Failed to notify user:", e)
-
+                await bot.session.close()
 
             except Exception as e:
-                print("❌ Failed to parse order_id:", e)
+                print("❌ Failed to notify user:", e)
 
         return web.Response(text="ok")
 
