@@ -1,4 +1,6 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
+from aiogram.filters import Command
+
 from services.storage import get_tariff_for_user
 
 router = Router()
@@ -6,13 +8,14 @@ router = Router()
 SURVEY_LINK = "https://forms.gle/yDwFQvB4CW5zPjNH6"
 
 
-@router.message(commands=["survey"])
+# 1️⃣ Команда /survey
+@router.message(Command("survey"))
 async def survey_start(message: types.Message):
     await message.answer(
         "📝 *Оплату отримано!*\n\n"
         "Заповніть, будь ласка, анкету, щоб ми могли зробити курс ще кориснішим 💛\n\n"
         f"👉 Анкета: {SURVEY_LINK}\n\n"
-        "Коли закінчите — натисніть *Готово* 👇",
+        "Коли закінчите — натисніть кнопку нижче:",
         reply_markup=types.InlineKeyboardMarkup(
             inline_keyboard=[
                 [types.InlineKeyboardButton(text="✔️ Готово", callback_data="survey_done")]
@@ -22,7 +25,8 @@ async def survey_start(message: types.Message):
     )
 
 
-@router.callback_query(lambda c: c.data == "survey_done")
+# 2️⃣ Натиснули «Готово»
+@router.callback_query(F.data == "survey_done")
 async def survey_done(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     tariff = get_tariff_for_user(user_id)
@@ -39,4 +43,5 @@ async def survey_done(callback: types.CallbackQuery):
         "Ось ваше посилання на курс:\n"
         f"👉 {folder}"
     )
+
     await callback.answer()
