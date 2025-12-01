@@ -1,32 +1,35 @@
 from aiohttp import web
+import base64
 import json
-
 from services.storage import set_tariff_for_user
 
 
 async def liqpay_callback(request: web.Request):
-    body = await request.post()
-    data_b64 = body.get("data")
-    if not data_b64:
+    data = await request.post()
+
+    raw_data = data.get("data")
+    signature = data.get("signature")
+
+    if not raw_data:
         return web.Response(text="No data")
 
-    try:
-        data_json = json.loads(base64.b64decode(data_b64).decode("utf-8"))
-    except Exception:
-        return web.Response(text="Bad data")
+    # Декодуємо data
+    decoded_json = base64.b64decode(raw_data).decode()
+    payment_info = json.loads(decoded_json)
 
-    order_id = data_json.get("order_id")
-    status = data_json.get("status")
-    user_id = data_json.get("sender_phone") or None
+    print("📩 CALLBACK:", payment_info)  # 👉 тепер буде в логах
 
-    if status == "success" and order_id:
-        # order_id format: USERID_TARIFF
-        try:
-            uid_str, tariff = order_id.split("_")
-            uid = int(uid_str)
+    order_id = payment_info.get("order_id")
+    status = payment_info.get("status")
 
-            set_tariff_for_user(uid, tariff)
-        except:
-            pass
+    # LiqPay статуси: success, failure, error, sandbox, wait_accept
+    if status in ("success", "sandbox"):
+        parts = order_id.split("_")
+        user_id = parts[0]
+        tariff = parts[1]
 
-    return web.Response(text="OK")
+        set_tariff_for_user(user_id, tariff)
+
+        return web.Response(text="OK")
+
+    return web.Response(text="IGNORED")
