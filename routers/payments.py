@@ -1,72 +1,45 @@
 from aiogram import Router, types
-from services.storage import set_tariff_for_user
+from keyboards.pay_kb import payment_keyboard
 from services.liqpay import create_payment_link
+from services.storage import set_tariff_for_user
 
 router = Router()
 
-
-# --- ТАРИФИ ---
 TARIFFS = {
-    "A": {
-        "amount": 1500,
-        "title": "Повна оплата — 12 уроків"
-    },
-    "B": {
-        "amount": 800,
-        "title": "Частинами — 6 уроків"
-    },
-    "C": {
-        "amount": 2000,
-        "title": "PRO — повний курс + 1 місяць менторства"
-    },
-    "D": {
-        "amount": 3490,
-        "title": "MAX — 6 міс програма + бонуси + ком'юніті"
-    }
+    "A": 1500,
+    "B": 800,
+    "C": 2000,
+    "D": 3490,
+}
+
+DESCRIPTIONS = {
+    "A": "Повний курс (12 уроків)",
+    "B": "6 уроків (перша частина)",
+    "C": "PRO доступ (12 уроків + ментор)",
+    "D": "MAX програма (6 місяців)",
 }
 
 
+@router.callback_query(lambda c: c.data == "show_payments")
+async def show_payments(callback: types.CallbackQuery):
+    await callback.message.answer(
+        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n"
+        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
+        reply_markup=payment_keyboard()
+    )
+
+
 @router.callback_query(lambda c: c.data.startswith("pay_"))
-async def process_payment(call: types.CallbackQuery):
-    tariff_code = call.data.split("_")[1]
+async def choose_tariff(callback: types.CallbackQuery):
+    tariff = callback.data.split("_")[1]
 
-    if tariff_code not in TARIFFS:
-        await call.message.answer("❗ Помилка: тариф не знайдено.")
-        return
+    amount = TARIFFS[tariff]
+    description = DESCRIPTIONS[tariff]
 
-    # Зберігаємо тариф за користувачем
-    user_id = call.from_user.id
-    set_tariff_for_user(user_id, tariff_code)
+    order_id = f"{callback.from_user.id}_{tariff}"
 
-    tariff = TARIFFS[tariff_code]
+    pay_link = create_payment_link(amount, description, order_id)
 
-    # Створюємо order_id (унікальний)
-    order_id = f"{user_id}_{tariff_code}"
-
-    # Створюємо посилання LiqPay
-    link = create_payment_link(
-        amount=tariff["amount"],
-        description=tariff["title"],
-        order_id=order_id
+    await callback.message.answer(
+        f"💳 Натисніть, щоб оплатити тариф {tariff}:\n{pay_link}"
     )
-
-    await call.message.answer(
-        f"💳 *{tariff['title']}*\n\n"
-        "Натисніть кнопку нижче, щоб здійснити оплату ⬇️",
-        parse_mode="Markdown",
-        reply_markup=types.InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    types.InlineKeyboardButton(
-                        text="👉 Перейти до оплати",
-                        url=link
-                    )
-                ]
-            ]
-        )
-    )
-
-
-# --- CALLBACK ВІД LIQPAY ---
-# (обробляється Railway через liqpay_callback.py)
-# тут ми лише повторно не ловимо його, щоби уникнути дублювання
