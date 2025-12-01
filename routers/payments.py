@@ -78,13 +78,38 @@ async def liqpay_callback(request: web.Request):
 
         print("🔥 ORDER:", order_id, "| STATUS:", status)
 
-        # статуси що вважаємо успішними
-        if status in ("success", "sandbox"):
-            try:
-                # order_id = "userId_timestamp_tariff"
-                user_id, ts, tariff = order_id.split("_")
-                set_tariff_for_user(int(user_id), tariff)
-                print("✅ Tariff saved for user:", user_id, tariff)
+          # Якщо оплата успішна — відправляємо юзеру повідомлення
+    if status in ("success", "sandbox"):
+        try:
+            # order_id має формат "503376706_176460689_B"
+            parts = order_id.split("_")
+            user_id = int(parts[0])
+            tariff = parts[2]
+
+            # Зберігаємо тариф
+            set_tariff_for_user(user_id, tariff)
+            print("✅ Tariff saved for user:", user_id, tariff)
+
+            # ---- Відправляємо повідомлення користувачу в Telegram ----
+            from aiogram import Bot
+            from config import TOKEN
+
+            bot = Bot(token=TOKEN)
+
+            await bot.send_message(
+                user_id,
+                "🎉 *Оплату отримано!*\n\n"
+                "Будь ласка, заповніть коротку анкету, щоб ми могли дати вам максимальну користь 💛\n\n"
+                "📝 Анкета: https://forms.gle/yDwFQvB4CW5zPjNH6\n\n"
+                "Коли закінчите — натисніть *Готово* або введіть /survey",
+                parse_mode="Markdown"
+            )
+
+            await bot.session.close()
+
+        except Exception as e:
+            print("❌ Failed to notify user:", e)
+
 
             except Exception as e:
                 print("❌ Failed to parse order_id:", e)
