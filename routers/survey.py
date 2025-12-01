@@ -1,49 +1,45 @@
 from aiogram import Router, types
-from aiogram.filters import Command
 from services.storage import get_tariff_for_user
-from config import SURVEY_LINK, FULL_COURSE, HALF_COURSE
 
 router = Router()
 
+SURVEY_LINK = "https://forms.gle/yDwFQvB4CW5zPjNH6"
 
-@router.message(Command("survey"))
+COURSE_LINKS = {
+    "A": "https://drive.google.com/drive/folders/17kRu8_6PUcvBqn8wu_VOfPF1yIX2MnjV",
+    "B": "https://drive.google.com/drive/folders/1NOTy5kUv7A-t4733L-pTPFxNTZH3_GqJ",
+    "C": "https://drive.google.com/drive/folders/12qIxBwxPzb8exbdONy6UX55mu-LP4P-6",
+    "D": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
+}
+
+
+@router.message(commands=["survey"])
 async def survey_start(message: types.Message):
     await message.answer(
-        "📝 Дякуємо за оплату!\n"
-        "Будь ласка, заповніть невелику анкету — це допоможе нам краще зрозуміти ваші цілі ❤️\n\n"
-        f"👉 Анкета: {SURVEY_LINK}\n\n"
-        "Коли будете готові — натисніть кнопку нижче 👇",
-        reply_markup=types.InlineKeyboardMarkup(
-            inline_keyboard=[[
-                types.InlineKeyboardButton(
-                    text="Готово ✅",
-                    callback_data="survey_done"
-                )
-            ]]
+        "🎉 Оплату отримано!\n"
+        "Тепер заповніть анкету, щоб ми могли створити ще кращий продукт для вас!\n\n"
+        f"📝 Анкета: {SURVEY_LINK}\n\n"
+        "Коли заповните — натисніть *Готово*.",
+        reply_markup=types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="Готово")]],
+            resize_keyboard=True
         )
     )
 
 
-@router.callback_query(lambda c: c.data == "survey_done")
-async def survey_done(call: types.CallbackQuery):
-    user_id = call.from_user.id
-    tariff = get_tariff_for_user(user_id)
+@router.message(lambda m: m.text == "Готово")
+async def send_course(message: types.Message):
+    tariff = get_tariff_for_user(message.from_user.id)
 
-    if tariff == "A":
-        link = FULL_COURSE
-    elif tariff == "B":
-        link = HALF_COURSE
-    elif tariff == "C":
-        link = FULL_COURSE
-    elif tariff == "D":
-        link = FULL_COURSE
-    else:
-        await call.message.edit_text("❗ Виникла помилка. Тариф не знайдено.")
+    if not tariff:
+        await message.answer("Помилка: не можу знайти ваш тариф 😢")
         return
 
-    await call.message.edit_text(
-        "🎉 Дякуємо! Анкету отримано ❤️\n\n"
+    link = COURSE_LINKS.get(tariff)
+
+    await message.answer(
+        "Дякуємо за відповіді! ❤️\n\n"
         "Ось ваше посилання на курс:\n"
-        f"👉 {link}\n\n"
-        "Успіхів у навчанні! 🚀"
+        f"👉 {link}",
+        reply_markup=types.ReplyKeyboardRemove()
     )
