@@ -2,67 +2,75 @@ from aiogram import Router, types
 from aiogram.types import CallbackQuery
 import time
 from aiohttp import web
+import base64
+import json
 
 from services.liqpay import create_payment_link
 from services.storage import set_tariff_for_user
 
+
 router = Router()
 
-# --- Тарифи ---
+# ---- ТАРИФИ ----
 TARIFFS = {
     "A": {"amount": 1500, "name": "Повна оплата — 1500 грн"},
-    "B": {"amount": 800,  "name": "Частинами — 800 грн"},
+    "B": {"amount": 800, "name": "Частинами — 800 грн (6 уроків)"},
     "C": {"amount": 2000, "name": "PRO доступ — 2000 грн"},
-    "D": {"amount": 3490, "name": "MAX-програма — 3490 грн"},
+    "D": {"amount": 3490, "name": "MAX — 3490 грн"},
 }
 
 
-# ================================
-#  Генерація посилання на оплату
-# ================================
+# -----------------------------------------------------------
+# 👉 ОБРОБКА ВИБОРУ ТАРИФУ (створюємо зовнішній LiqPay-лінк)
+# -----------------------------------------------------------
 @router.callback_query(lambda c: c.data.startswith("pay_"))
 async def pay_handler(callback: CallbackQuery):
     tariff = callback.data.split("_")[1]
     info = TARIFFS[tariff]
 
-    # Унікальний order_id: userID_tariff_timestamp
-    order_id = f"{callback.from_user.id}_{tariff}_{int(time.time())}"
+    # Унікальний order_id
+    # 👇 Дуже важливо: user_id всередині!
+    order_id = f"{callback.from_user.id}_{int(time.time())}_{tariff}"
 
-    # Зберегти тариф одразу
+    # Зберегти тариф у локальну базу
     set_tariff_for_user(callback.from_user.id, tariff)
 
-    # Генерувати посилання LiqPay
+    # Створити лінк LiqPay
     link = create_payment_link(
         amount=info["amount"],
         description=f"Тариф {tariff}",
         order_id=order_id
     )
 
+    # Відповідь користувачу
     await callback.message.answer(
-        f"💎 Тариф {tariff} — {info['name']}\n\n"
-        f"Перейдіть за посиланням для оплати:\n"
-        f"{link}"
+        f"💎 *Тариф {tariff} — {info['name']}*\n\n"
+        f"🔗 Для оплати перейдіть за посиланням:\n{link}",
+        parse_mode="Markdown"
     )
+
     await callback.answer()
 
 
-# ================================
-#    LiqPay CALLBACK handler
-# ================================
+# -----------------------------------------------------------
+# 👉 CALLBACK LiqPay → запуск логіки оплати
+# -----------------------------------------------------------
 async def liqpay_callback(request: web.Request):
+    """
+    LiqPay надсилає POST { data, signature }
+    Ми перевіряємо статус і оновлюємо користувача.
+    """
     try:
-        data = await request.post()
-        print("🔥 CALLBACK RECEIVED:", data)
+        payload = await request.post()
 
-        lp_data = data.get("data")
-        lp_sign = data.get("signature")
+        lp_data = payload.get("data")
+        lp_sign = payload.get("signature")
+
+        print("🔥 CALLBACK RECEIVED:", payload)
 
         if not lp_data:
-            print("❌ CALLBACK ERROR: no data")
             return web.Response(text="no data")
 
-        # Декодуємо JSON
-        import base64, json
         decoded = json.loads(base64.b64decode(lp_data).decode())
 
         order_id = decoded.get("order_id")
@@ -70,12 +78,16 @@ async def liqpay_callback(request: web.Request):
 
         print("🔥 ORDER:", order_id, "| STATUS:", status)
 
-    if status in ("success", "sandbox"):
-    # expected format: userId_tariff_timestamp
-            user_id, tariff, _ = order_id.split("_")
+        # статуси що вважаємо успішними
+        if status in ("success", "sandbox"):
+            try:
+                # order_id = "userId_timestamp_tariff"
+                user_id, ts, tariff = order_id.split("_")
+                set_tariff_for_user(int(user_id), tariff)
+                print("✅ Tariff saved for user:", user_id, tariff)
 
-            set_tariff_for_user(int(user_id), tariff)
-            print(f"✔ SUCCESS saved tariff {tariff} for user {user_id}")
+            except Exception as e:
+                print("❌ Failed to parse order_id:", e)
 
         return web.Response(text="ok")
 
