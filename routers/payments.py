@@ -77,3 +77,5 @@ async def liqpay_callback(request: web.Request):
     except Exception as e:
         print("❌ CALLBACK ERROR:", e)
         return web.Response(text="error", status=500)
+
+
