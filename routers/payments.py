@@ -70,8 +70,8 @@ async def liqpay_callback(request: web.Request):
 
         print("🔥 ORDER:", order_id, "| STATUS:", status)
 
-        if status == "success":
-            # expected format: userId_tariff_timestamp
+    if status in ("success", "sandbox"):
+    # expected format: userId_tariff_timestamp
             user_id, tariff, _ = order_id.split("_")
 
             set_tariff_for_user(int(user_id), tariff)
