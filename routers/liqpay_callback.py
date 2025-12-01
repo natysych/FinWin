@@ -1,21 +1,20 @@
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram import Bot
-from aiohttp import web
-import base64
-import json
-from services.storage import get_tariff_for_user
+from config import TOKEN
 
-async def liqpay_callback(request: web.Request):
-    bot: Bot = request.app["bot"]
+bot = Bot(token=TOKEN)
 
-    data = await request.post()
-    data_b64 = data.get("data")
-    if not data_b64:
-        return web.Response(text="NO DATA")
+await bot.send_message(
+    user_id,
+    "🎉 *Оплату отримано!*\n\n"
+    "Будь ласка, заповніть коротку анкету, щоб ми могли створити ще кращий продукт для вас 💛\n\n"
+    f"📝 Анкета: {SURVEY_LINK}\n\n"
+    "Коли заповните — натисніть *Готово*.",
+    parse_mode="Markdown",
+    reply_markup=ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Готово")]],
+        resize_keyboard=True
+    )
+)
 
-    decoded = json.loads(base64.b64decode(data_b64).decode())
-    user_id = decoded.get("sender_phone")  # LiqPay НЕ передає user_id TG!
-
-    # Ми НЕ можемо визначити Telegram ID через LiqPay!
-    # Тому логіка проста: після оплати користувач сам вводить /survey
-
-    return web.Response(text="OK")
+await bot.session.close()
