@@ -1,94 +1,36 @@
 from aiogram import Router, types
-
-from keyboards.pay_kb import payment_keyboard
+from aiogram.filters import CallbackQuery
 from services.liqpay import create_payment_link
 from services.storage import set_tariff_for_user
+import time
 
 router = Router()
 
-
-# /pay – показуємо вибір тарифів (якщо тобі треба окрема команда)
-@router.message(lambda m: m.text == "/pay")
-async def show_tariffs(message: types.Message):
-    await message.answer(
-        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше. "
-        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
-        reply_markup=payment_keyboard()
-    )
+TARIFFS = {
+    "A": {"amount": 1500, "name": "Повна оплата — 1500 грн"},
+    "B": {"amount": 800, "name": "Частинами — 800 грн"},
+    "C": {"amount": 2000, "name": "PRO доступ — 2000 грн"},
+    "D": {"amount": 3490, "name": "MAX-програма — 3490 грн"}
+}
 
 
-# --- Тариф A -------------------------------------------------
-@router.callback_query(lambda c: c.data == "pay_A")
-async def pay_a(callback: types.CallbackQuery):
-    # запам’ятовуємо тариф користувача
-    set_tariff_for_user(callback.from_user.id, "A")
+@router.callback_query(lambda c: c.data.startswith("pay_"))
+async def pay_handler(callback: CallbackQuery):
+    tariff = callback.data.split("_")[1]
+    info = TARIFFS[tariff]
 
-    pay_url = create_payment_link(
-        amount=1500,
-        description="Тариф A: Повна оплата — 1500 грн",
-        order_id=f"{callback.from_user.id}_A",
-    )
+    order_id = f"{int(time.time())}_{tariff}"
 
-    await callback.message.answer(
-        "💎 A) Повна оплата — 1500 грн.\n"
-        "Курс з 12 уроків, доступ назавжди.\n\n"
-        "Перейдіть за посиланням для оплати:\n"
-        f"{pay_url}"
-    )
+    set_tariff_for_user(callback.from_user.id, tariff)
 
-
-# --- Тариф B -------------------------------------------------
-@router.callback_query(lambda c: c.data == "pay_B")
-async def pay_b(callback: types.CallbackQuery):
-    set_tariff_for_user(callback.from_user.id, "B")
-
-    pay_url = create_payment_link(
-        amount=800,
-        description="Тариф B: Оплата частинами — 800 грн",
-        order_id=f"{callback.from_user.id}_B",
+    link = create_payment_link(
+        amount=info["amount"],
+        description=f"Тариф {tariff}",
+        order_id=order_id
     )
 
     await callback.message.answer(
-        "💳 B) Оплата частинами — 800 грн.\n"
-        "Доступ до перших 6 уроків відкриється одразу після платежу.\n\n"
-        "Перейдіть за посиланням для оплати:\n"
-        f"{pay_url}"
+        f"💎 Тариф {tariff} — {info['name']}\n"
+        f"Перейдіть за посиланням для оплати:\n{link}"
     )
-
-
-# --- Тариф C -------------------------------------------------
-@router.callback_query(lambda c: c.data == "pay_C")
-async def pay_c(callback: types.CallbackQuery):
-    set_tariff_for_user(callback.from_user.id, "C")
-
-    pay_url = create_payment_link(
-        amount=2000,
-        description="Тариф C: PRO доступ — 2000 грн",
-        order_id=f"{callback.from_user.id}_C",
-    )
-
-    await callback.message.answer(
-        "🔥 C) PRO доступ — 2000 грн.\n"
-        "Доступ до всього курсу + менторський супровід 1 місяць.\n\n"
-        "Перейдіть за посиланням для оплати:\n"
-        f"{pay_url}"
-    )
-
-
-# --- Тариф D -------------------------------------------------
-@router.callback_query(lambda c: c.data == "pay_D")
-async def pay_d(callback: types.CallbackQuery):
-    set_tariff_for_user(callback.from_user.id, "D")
-
-    pay_url = create_payment_link(
-        amount=3490,
-        description="Тариф D: MAX програма — 3490 грн",
-        order_id=f"{callback.from_user.id}_D",
-    )
-
-    await callback.message.answer(
-        "👑 D) MAX-програма — 3490 грн.\n"
-        "6-місячна програма + додаткові модулі + спільнота + фідбек.\n\n"
-        "Перейдіть за посиланням для оплати:\n"
-        f"{pay_url}"
-    )
+    await callback.answer()
