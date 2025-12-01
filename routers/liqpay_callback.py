@@ -1,35 +1,21 @@
+from aiogram import Bot
 from aiohttp import web
 import base64
 import json
-from services.storage import set_tariff_for_user
-
+from services.storage import get_tariff_for_user
 
 async def liqpay_callback(request: web.Request):
+    bot: Bot = request.app["bot"]
+
     data = await request.post()
+    data_b64 = data.get("data")
+    if not data_b64:
+        return web.Response(text="NO DATA")
 
-    raw_data = data.get("data")
-    signature = data.get("signature")
+    decoded = json.loads(base64.b64decode(data_b64).decode())
+    user_id = decoded.get("sender_phone")  # LiqPay НЕ передає user_id TG!
 
-    if not raw_data:
-        return web.Response(text="No data")
+    # Ми НЕ можемо визначити Telegram ID через LiqPay!
+    # Тому логіка проста: після оплати користувач сам вводить /survey
 
-    # Декодуємо data
-    decoded_json = base64.b64decode(raw_data).decode()
-    payment_info = json.loads(decoded_json)
-
-    print("📩 CALLBACK:", payment_info)  # 👉 тепер буде в логах
-
-    order_id = payment_info.get("order_id")
-    status = payment_info.get("status")
-
-    # LiqPay статуси: success, failure, error, sandbox, wait_accept
-    if status in ("success", "sandbox"):
-        parts = order_id.split("_")
-        user_id = parts[0]
-        tariff = parts[1]
-
-        set_tariff_for_user(user_id, tariff)
-
-        return web.Response(text="OK")
-
-    return web.Response(text="IGNORED")
+    return web.Response(text="OK")
