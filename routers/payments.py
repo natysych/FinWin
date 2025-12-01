@@ -1,45 +1,45 @@
 from aiogram import Router, types
-from keyboards.pay_kb import payment_keyboard
-from services.liqpay import create_payment_link
-from services.storage import set_tariff_for_user
 
 router = Router()
 
-TARIFFS = {
-    "A": 1500,
-    "B": 800,
-    "C": 2000,
-    "D": 3490,
-}
-
-DESCRIPTIONS = {
-    "A": "Повний курс (12 уроків)",
-    "B": "6 уроків (перша частина)",
-    "C": "PRO доступ (12 уроків + ментор)",
-    "D": "MAX програма (6 місяців)",
-}
+# --- ТВОЇ ГОТОВІ ЗОВНІШНІ LiqPay ПОСИЛАННЯ ---
+PAY_LINK_A = "ТУТ ЛІНК A"
+PAY_LINK_B = "ТУТ ЛІНК B"
+PAY_LINK_C = "ТУТ ЛІНК C"
+PAY_LINK_D = "ТУТ ЛІНК D"
 
 
-@router.callback_query(lambda c: c.data == "show_payments")
-async def show_payments(callback: types.CallbackQuery):
+@router.callback_query(lambda c: c.data == "pay_A")
+async def pay_A(callback: types.CallbackQuery):
     await callback.message.answer(
-        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше.\n"
-        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.",
-        reply_markup=payment_keyboard()
+        "💎 Тариф A — Повна оплата 1500 грн\n"
+        "Перейдіть за посиланням для оплати:\n"
+        f"{PAY_LINK_A}"
     )
 
 
-@router.callback_query(lambda c: c.data.startswith("pay_"))
-async def choose_tariff(callback: types.CallbackQuery):
-    tariff = callback.data.split("_")[1]
-
-    amount = TARIFFS[tariff]
-    description = DESCRIPTIONS[tariff]
-
-    order_id = f"{callback.from_user.id}_{tariff}"
-
-    pay_link = create_payment_link(amount, description, order_id)
-
+@router.callback_query(lambda c: c.data == "pay_B")
+async def pay_B(callback: types.CallbackQuery):
     await callback.message.answer(
-        f"💳 Натисніть, щоб оплатити тариф {tariff}:\n{pay_link}"
+        "💳 Тариф B — Частинами 800 грн\n"
+        "Перейдіть за посиланням для оплати:\n"
+        f"{PAY_LINK_B}"
+    )
+
+
+@router.callback_query(lambda c: c.data == "pay_C")
+async def pay_C(callback: types.CallbackQuery):
+    await callback.message.answer(
+        "🔥 Тариф C — PRO доступ 2000 грн\n"
+        "Перейдіть за посиланням для оплати:\n"
+        f"{PAY_LINK_C}"
+    )
+
+
+@router.callback_query(lambda c: c.data == "pay_D")
+async def pay_D(callback: types.CallbackQuery):
+    await callback.message.answer(
+        "👑 Тариф D — MAX програма 3490 грн\n"
+        "Перейдіть за посиланням для оплати:\n"
+        f"{PAY_LINK_D}"
     )
