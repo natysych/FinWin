@@ -29,7 +29,7 @@ async def pay_handler(callback: CallbackQuery):
     tariff = callback.data.split("_")[1]
     info = TARIFFS[tariff]
 
-    # Унікальний order_id, включає user_id
+    # Унікальний order_id
     order_id = f"{callback.from_user.id}_{int(time.time())}_{tariff}"
 
     # Зберегти тариф у локальній базі
@@ -57,7 +57,6 @@ async def pay_handler(callback: CallbackQuery):
 async def liqpay_callback(request: web.Request):
     try:
         payload = await request.post()
-
         lp_data = payload.get("data")
         lp_sign = payload.get("signature")
 
@@ -78,4 +77,39 @@ async def liqpay_callback(request: web.Request):
             try:
                 # Формат order_id: userID_timestamp_tariff
                 parts = order_id.split("_")
-                user_id =_
+                user_id = int(parts[0])
+                tariff = parts[2]
+
+                # Зберегти тариф
+                set_tariff_for_user(user_id, tariff)
+                print(f"✅ Tariff saved for user {user_id}: {tariff}")
+
+                # Надсилаємо повідомлення
+                from aiogram import Bot
+                from config import TOKEN
+
+                bot = Bot(token=TOKEN)
+
+                await bot.send_message(
+                    user_id,
+                    "🎉 *Оплату отримано!*\n\n"
+                    "Будь ласка, заповніть коротку анкету, щоб ми могли створити ще кращий продукт для вас 💛\n\n"
+                    "📝 Анкета: https://forms.gle/yDwFQvB4CW5zPjNH6\n\n"
+                    "Коли заповните — натисніть *Готово*.",
+                    parse_mode="Markdown",
+                    reply_markup=ReplyKeyboardMarkup(
+                        keyboard=[[KeyboardButton(text="Готово")]],
+                        resize_keyboard=True
+                    )
+                )
+
+                await bot.session.close()
+
+            except Exception as e:
+                print("❌ Error during success-notification:", e)
+
+        return web.Response(text="ok")
+
+    except Exception as e:
+        print("❌ CALLBACK ERROR:", e)
+        return web.Response(text="error", status=500)
