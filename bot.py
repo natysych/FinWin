@@ -8,7 +8,8 @@ from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
 # Routers
 from routers.start import router as start_router
-from routers.payments import router as payments_router, liqpay_callback
+from routers.payments import router as payments_router
+from routers.liqpay_callback import liqpay_callback
 from routers.info import router as info_router
 from routers.survey import router as survey_router
 from routers.offer import router as offer_router
