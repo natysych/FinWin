@@ -3,11 +3,12 @@ from aiohttp import web
 
 from keyboards.pay_kb import payment_keyboard
 from services.liqpay import create_payment_link
-from services.storage import set_tariff_for_user
+from services.storage import set_tariff_for_user, get_tariff_for_user
 
 router = Router()
 
-# --- ТАРИФИ ---
+
+# ---------- ТАРИФИ ----------
 TARIFFS = {
     "pay_A": {
         "amount": 1500,
@@ -16,7 +17,7 @@ TARIFFS = {
     },
     "pay_B": {
         "amount": 800,
-        "desc": "Оплата частинами — перші 6 уроків",
+        "desc": "Оплата частинами — 6 уроків",
         "folder": "https://drive.google.com/drive/folders/1NOTy5kUv7A-t4733L-pTPFxNTZH3_GqJ",
     },
     "pay_C": {
@@ -26,46 +27,50 @@ TARIFFS = {
     },
     "pay_D": {
         "amount": 3490,
-        "desc": "MAX-програма — повний курс + бонуси",
+        "desc": "MAX — повний курс + бонуси",
         "folder": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
     },
 }
 
 
-# 🧾 Натискання на один із тарифів A/B/C/D
+# ---------- ОБРОБКА ВИБОРУ ТАРИФУ ----------
 @router.callback_query(F.data.in_(TARIFFS.keys()))
 async def start_payment(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    tariff_id = callback.data  # "pay_A" / "pay_B" / ...
+    tariff_id = callback.data
 
     tariff = TARIFFS[tariff_id]
+
     amount = tariff["amount"]
     description = tariff["desc"]
 
-    # order_id — прив'язуємо платіж до користувача + тарифу
     order_id = f"{user_id}_{tariff_id}"
 
-    # Генеруємо коректне посилання LiqPay (через services/liqpay.py)
-    link = create_payment_link(
-        amount=amount,
-        description=description,
-        order_id=order_id,
-    )
+    # Генеруємо LiqPay-лінк
+    link = create_payment_link(amount, description, order_id)
 
-    # Запам’ятовуємо, який тариф обрав юзер
+    # Запам’ятовуємо тариф
     set_tariff_for_user(user_id, tariff_id)
 
+    # Відправляємо КНОПКУ (зовнішня оплата)
+    kb = types.InlineKeyboardMarkup(inline_keyboard=[
+        [
+            types.InlineKeyboardButton(text="💳 Перейти до оплати", url=link)
+        ]
+    ])
+
     await callback.message.answer(
-        f"💳 *Оплата тарифу:* _{description}_\n\n"
+        f"💳 *Оплата тарифу:* _{description}_\n"
         f"Сума: *{amount} грн*\n\n"
-        f"👉 Натисніть, щоб оплатити:\n{link}",
-        parse_mode="Markdown",
+        f"👉 Натисніть кнопку нижче, щоб перейти на сторінку LiqPay.",
+        reply_markup=kb,
+        parse_mode="Markdown"
     )
     await callback.answer()
 
 
-# 📩 CALLBACK від LiqPay (поки мінімальний, просто приймаємо)
+# ---------- CALLBACK від LIQPAY ----------
 async def liqpay_callback(request: web.Request):
     data = await request.post()
-    print("📩 LiqPay callback data:", data)
+    print("📩 LiqPay callback:", data)
     return web.Response(text="OK")
