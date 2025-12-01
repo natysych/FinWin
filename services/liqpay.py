@@ -5,7 +5,7 @@ import hashlib
 
 LIQPAY_PUBLIC_KEY = os.getenv("LIQPAY_PUBLIC_KEY")
 LIQPAY_PRIVATE_KEY = os.getenv("LIQPAY_PRIVATE_KEY")
-LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")  # редірект після оплати
+LIQPAY_RESULT_URL = os.getenv("LIQPAY_RESULT_URL")
 
 
 def _encode_data(data: dict) -> str:
@@ -28,8 +28,7 @@ def create_payment_link(amount: int, description: str, order_id: str) -> str:
         "description": description,
         "order_id": order_id,
         "result_url": LIQPAY_RESULT_URL,
-        "server_url": "https://web-production-d9eda.up.railway.app/payment/callback",
-        "sandbox": 1
+        "sandbox": 1,  # 1 = тестовий режим
     }
 
     data_b64 = _encode_data(data)
