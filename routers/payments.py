@@ -1,76 +1,72 @@
-from aiogram import Router, types, F
-from aiohttp import web
-
-from keyboards.pay_kb import payment_keyboard
+from aiogram import Router, types
+from services.storage import set_tariff_for_user
 from services.liqpay import create_payment_link
-from services.storage import set_tariff_for_user, get_tariff_for_user
 
 router = Router()
 
 
-# ---------- ТАРИФИ ----------
+# --- ТАРИФИ ---
 TARIFFS = {
-    "pay_A": {
+    "A": {
         "amount": 1500,
-        "desc": "Повна оплата — 12 уроків",
-        "folder": "https://drive.google.com/drive/folders/17kRu8_6PUcvBqn8wu_VOfPF1yIX2MnjV",
+        "title": "Повна оплата — 12 уроків"
     },
-    "pay_B": {
+    "B": {
         "amount": 800,
-        "desc": "Оплата частинами — 6 уроків",
-        "folder": "https://drive.google.com/drive/folders/1NOTy5kUv7A-t4733L-pTPFxNTZH3_GqJ",
+        "title": "Частинами — 6 уроків"
     },
-    "pay_C": {
+    "C": {
         "amount": 2000,
-        "desc": "PRO доступ — повний курс + супровід",
-        "folder": "https://drive.google.com/drive/folders/12qIxBwxPzb8exbdONy6UX55mu-LP4P-6",
+        "title": "PRO — повний курс + 1 місяць менторства"
     },
-    "pay_D": {
+    "D": {
         "amount": 3490,
-        "desc": "MAX — повний курс + бонуси",
-        "folder": "https://drive.google.com/drive/folders/1pWH01RL1A7L9XK_Te1lwTLlIbVOx_BWQ",
-    },
+        "title": "MAX — 6 міс програма + бонуси + ком'юніті"
+    }
 }
 
 
-# ---------- ОБРОБКА ВИБОРУ ТАРИФУ ----------
-@router.callback_query(F.data.in_(TARIFFS.keys()))
-async def start_payment(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    tariff_id = callback.data
+@router.callback_query(lambda c: c.data.startswith("pay_"))
+async def process_payment(call: types.CallbackQuery):
+    tariff_code = call.data.split("_")[1]
 
-    tariff = TARIFFS[tariff_id]
+    if tariff_code not in TARIFFS:
+        await call.message.answer("❗ Помилка: тариф не знайдено.")
+        return
 
-    amount = tariff["amount"]
-    description = tariff["desc"]
+    # Зберігаємо тариф за користувачем
+    user_id = call.from_user.id
+    set_tariff_for_user(user_id, tariff_code)
 
-    order_id = f"{user_id}_{tariff_id}"
+    tariff = TARIFFS[tariff_code]
 
-    # Генеруємо LiqPay-лінк
-    link = create_payment_link(amount, description, order_id)
+    # Створюємо order_id (унікальний)
+    order_id = f"{user_id}_{tariff_code}"
 
-    # Запам’ятовуємо тариф
-    set_tariff_for_user(user_id, tariff_id)
-
-    # Відправляємо КНОПКУ (зовнішня оплата)
-    kb = types.InlineKeyboardMarkup(inline_keyboard=[
-        [
-            types.InlineKeyboardButton(text="💳 Перейти до оплати", url=link)
-        ]
-    ])
-
-    await callback.message.answer(
-        f"💳 *Оплата тарифу:* _{description}_\n"
-        f"Сума: *{amount} грн*\n\n"
-        f"👉 Натисніть кнопку нижче, щоб перейти на сторінку LiqPay.",
-        reply_markup=kb,
-        parse_mode="Markdown"
+    # Створюємо посилання LiqPay
+    link = create_payment_link(
+        amount=tariff["amount"],
+        description=tariff["title"],
+        order_id=order_id
     )
-    await callback.answer()
+
+    await call.message.answer(
+        f"💳 *{tariff['title']}*\n\n"
+        "Натисніть кнопку нижче, щоб здійснити оплату ⬇️",
+        parse_mode="Markdown",
+        reply_markup=types.InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    types.InlineKeyboardButton(
+                        text="👉 Перейти до оплати",
+                        url=link
+                    )
+                ]
+            ]
+        )
+    )
 
 
-# ---------- CALLBACK від LIQPAY ----------
-async def liqpay_callback(request: web.Request):
-    data = await request.post()
-    print("📩 LiqPay callback:", data)
-    return web.Response(text="OK")
+# --- CALLBACK ВІД LIQPAY ---
+# (обробляється Railway через liqpay_callback.py)
+# тут ми лише повторно не ловимо його, щоби уникнути дублювання
