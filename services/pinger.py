@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 import os
 
-PING_URL = os.getenv("PING_URL")  # домен Railway
+PING_URL = os.getenv("PING_URL")
 
 
 async def keep_alive():
@@ -15,4 +15,4 @@ async def keep_alive():
         except Exception as e:
             print("❌ Ping error:", e)
 
-        await asyncio.sleep(240)  # 4 хвилини
+        await asyncio.sleep(240)  # 4 minutes
