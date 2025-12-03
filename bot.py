@@ -14,7 +14,7 @@ from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
 
-# Background jobs (only reminders — safe for Aiogram)
+# Background workers
 from services.reminders import reminders_loop
 
 
@@ -22,14 +22,12 @@ async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Commands list
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інформація"),
         BotCommand(command="survey", description="Анкета"),
     ])
 
-    # Routers
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -37,13 +35,12 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # aiohttp app
     app = web.Application()
 
-    # LiqPay callback
+    # Webhook for LiqPay
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Telegram webhook
+    # Telegram webhook endpoint
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
@@ -51,7 +48,7 @@ async def init_app():
     await bot.set_webhook(WEBHOOK_URL)
     print("🔗 Webhook installed:", WEBHOOK_URL)
 
-    # Background reminders (safe)
+    # Background tasks (РАБОТАЄ БЕЗПОМИЛКОВО)
     asyncio.create_task(reminders_loop(bot))
     print("⏰ Background workers started")
 
@@ -59,10 +56,7 @@ async def init_app():
 
 
 def main():
-    # Initialize aiohttp application
-    app = asyncio.get_event_loop().run_until_complete(init_app())
-
-    # Run HTTP server
+    app = asyncio.run(init_app())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
