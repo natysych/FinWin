@@ -16,21 +16,21 @@ from routers.unsubscribe import router as unsubscribe_router
 
 # Background jobs
 from services.reminders import reminders_loop
-from services.pinger import keep_alive   # 👈 новий анти-сон
+from services.pinger import keep_alive
 
 
 async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Команди бота
+    # Команди
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інформація"),
         BotCommand(command="survey", description="Анкета"),
     ])
 
-    # Підключення router'ів
+    # Routers
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -38,33 +38,36 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # Створюємо aiohttp app
+    # Aiohttp app
     app = web.Application()
 
-    # Callback від LiqPay
+    # LiqPay callback
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Telegram webhook
+    # Webhook
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
-    # Встановити webhook
-    await bot.set_webhook(WEBHOOK_URL)
-    print("🔗 Webhook set:", WEBHOOK_URL)
+    # ВСТАНОВЛЮЄМО ВЕБХУК ОДИН РАЗ
+    wh = await bot.get_webhook_info()
+    if wh.url != WEBHOOK_URL:
+        await bot.set_webhook(WEBHOOK_URL)
+        print("🔗 Webhook installed:", WEBHOOK_URL)
+    else:
+        print("🔗 Webhook already active")
 
-    # Запустити фонового нагадувача
+    # Фонові задачі
     asyncio.create_task(reminders_loop(bot))
-    print("⏰ Reminders started")
-
-    # Запустити анти-сон ping
     asyncio.create_task(keep_alive())
-    print("🌐 Anti-sleep ping started")
+    print("⏰ Background workers started")
 
     return app
 
 
 def main():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     app = loop.run_until_complete(init_app())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
