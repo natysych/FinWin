@@ -1,14 +1,27 @@
-from aiogram import Router, types, F
+# file: routers/unsubscribe.py
+from aiogram import Router, types
+from aiogram.filters import Command
+
 from services.storage import set_unsubscribed
 
 router = Router()
 
 
-@router.callback_query(F.data == "unsubscribe")
-async def handle_unsubscribe(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
+@router.message(Command("unsubscribe"))
+async def cmd_unsubscribe(message: types.Message):
+    user_id = message.from_user.id
     set_unsubscribed(user_id, True)
+    await message.answer(
+        "Добре! Якщо передумаєте — просто напишіть /start 😊",
+        reply_markup=types.ReplyKeyboardRemove(),
+    )
 
-    await callback.message.answer(
-        "Добре! Якщо передумаєте — просто натисніть або напишіть /start 😊"
+
+@router.message(lambda m: "unsubscribe" in m.text.lower())
+async def text_unsubscribe(message: types.Message):
+    user_id = message.from_user.id
+    set_unsubscribed(user_id, True)
+    await message.answer(
+        "Добре! Якщо передумаєте — просто напишіть /start 😊",
+        reply_markup=types.ReplyKeyboardRemove(),
     )
