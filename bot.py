@@ -6,7 +6,6 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
-# Routers
 from routers.start import router as start_router
 from routers.payments import router as payments_router, liqpay_callback
 from routers.info import router as info_router
@@ -14,7 +13,6 @@ from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
 
-# Background workers
 from services.reminders import reminders_loop
 
 
@@ -37,7 +35,7 @@ async def init_app():
 
     app = web.Application()
 
-    # Webhook for LiqPay
+    # LiqPay callback
     app.router.add_post("/payment/callback", liqpay_callback)
 
     # Telegram webhook endpoint
@@ -48,7 +46,7 @@ async def init_app():
     await bot.set_webhook(WEBHOOK_URL)
     print("🔗 Webhook installed:", WEBHOOK_URL)
 
-    # Background tasks (РАБОТАЄ БЕЗПОМИЛКОВО)
+    # Background workers
     asyncio.create_task(reminders_loop(bot))
     print("⏰ Background workers started")
 
@@ -56,8 +54,18 @@ async def init_app():
 
 
 def main():
-    app = asyncio.run(init_app())
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    app = loop.run_until_complete(init_app())
+
+    # 🟣 СТАБІЛЬНИЙ ЗАПУСК AIOHTTP
+    web.run_app(
+        app,
+        host=WEBAPP_HOST,
+        port=WEBAPP_PORT,
+        handle_signals=False,     # <– важливо
+    )
 
 
 if __name__ == "__main__":
