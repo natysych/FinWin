@@ -14,22 +14,23 @@ from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
 
-# Background task
+# Background jobs
 from services.reminders import reminders_loop
+from services.pinger import keep_alive   # 👈 новий анти-сон
 
 
-async def create_app():
+async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Commands
+    # Команди бота
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інформація"),
         BotCommand(command="survey", description="Анкета"),
     ])
 
-    # Routers
+    # Підключення router'ів
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -37,34 +38,35 @@ async def create_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # Web server
+    # Створюємо aiohttp app
     app = web.Application()
 
-    # LiqPay callback
+    # Callback від LiqPay
     app.router.add_post("/payment/callback", liqpay_callback)
 
     # Telegram webhook
     SimpleRequestHandler(dp, bot).register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
-    # Install webhook
+    # Встановити webhook
     await bot.set_webhook(WEBHOOK_URL)
     print("🔗 Webhook set:", WEBHOOK_URL)
 
-    # Background reminders
+    # Запустити фонового нагадувача
     asyncio.create_task(reminders_loop(bot))
     print("⏰ Reminders started")
+
+    # Запустити анти-сон ping
+    asyncio.create_task(keep_alive())
+    print("🌐 Anti-sleep ping started")
 
     return app
 
 
 def main():
-    # ❗️НЕ запускаємо run_until_complete!
-    web.run_app(
-        create_app(),
-        host=WEBAPP_HOST,
-        port=WEBAPP_PORT
-    )
+    loop = asyncio.get_event_loop()
+    app = loop.run_until_complete(init_app())
+    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
 if __name__ == "__main__":
