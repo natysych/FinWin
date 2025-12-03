@@ -1,5 +1,7 @@
+# file: routers/survey.py
 from aiogram import Router, types
 from aiogram.filters import Command
+
 from services.storage import get_tariff_for_user
 
 router = Router()
@@ -14,29 +16,20 @@ COURSE_LINKS = {
 }
 
 
-# ---------------------------------------------------------
-# 👉 Команда /survey (дублює повідомлення після оплати)
-# ---------------------------------------------------------
 @router.message(Command("survey"))
 async def survey_start(message: types.Message):
     await message.answer(
-        "🎉 Оплату отримано!\n\n"
-        "Будь ласка, заповніть коротку анкету, щоб ми могли створити ще кращий продукт для вас 💛\n\n"
+        "🎉 Оплату отримано!\n"
+        "Тепер заповніть анкету, щоб ми могли створити ще краще продукт для вас!\n\n"
         f"📝 Анкета: {SURVEY_LINK}\n\n"
         "Коли заповните — натисніть *Готово*.",
-        parse_mode="Markdown",
         reply_markup=types.ReplyKeyboardMarkup(
-            keyboard=[
-                [types.KeyboardButton(text="Готово")]
-            ],
-            resize_keyboard=True
-        )
+            keyboard=[[types.KeyboardButton(text="Готово")]],
+            resize_keyboard=True,
+        ),
     )
 
 
-# ---------------------------------------------------------
-# 👉 Обробка натискання кнопки «Готово»
-# ---------------------------------------------------------
 @router.message(lambda m: m.text == "Готово")
 async def send_course(message: types.Message):
     tariff = get_tariff_for_user(message.from_user.id)
@@ -51,5 +44,5 @@ async def send_course(message: types.Message):
         "Дякуємо за відповіді! ❤️\n\n"
         "Ось ваше посилання на курс:\n"
         f"👉 {link}",
-        reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove(),
     )
