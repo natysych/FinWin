@@ -1,14 +1,18 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from keyboards.start_kb import start_keyboard, continue_keyboard
 import asyncio
+
+from keyboards.start_kb import start_keyboard, continue_keyboard
+from keyboards.pay_kb import payment_type_keyboard
 
 router = Router()
 
 
+# -------------------------------
+# /start
+# -------------------------------
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
-    # Важливо: виконувати відповідь через task, а не напряму
     asyncio.create_task(
         message.answer(
             "🎉 Вітаємо! Ви підписалися на FinanceForTeens!\n\n"
@@ -18,6 +22,9 @@ async def start_cmd(message: types.Message):
     )
 
 
+# -------------------------------
+# Натиснув «Так»
+# -------------------------------
 @router.callback_query(lambda c: c.data == "start_yes")
 async def continue_after_intro(callback: types.CallbackQuery):
     asyncio.create_task(
@@ -31,21 +38,25 @@ async def continue_after_intro(callback: types.CallbackQuery):
     await callback.answer()
 
 
+# -------------------------------
+# Натиснув «Так, продовжимо»
+# -------------------------------
 @router.callback_query(lambda c: c.data == "cont_yes")
 async def show_tariffs(callback: types.CallbackQuery):
-    from keyboards.pay_kb import payment_type_keyboard
-
     asyncio.create_task(
         callback.message.answer(
-            "Оберіть тариф:",
+            "Оберіть тариф 👇",
             reply_markup=payment_type_keyboard()
         )
     )
     await callback.answer()
 
 
+# -------------------------------
+# Натиснув «Ні»
+# -------------------------------
 @router.callback_query(lambda c: c.data == "start_no")
-async def unsubscribe(callback: types.CallbackQuery):
+async def unsub(callback: types.CallbackQuery):
     asyncio.create_task(
         callback.message.answer("😢 Ви відписалися.")
     )
