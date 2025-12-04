@@ -1,61 +1,78 @@
 # services/storage.py
-"""
-In-memory сховище станів та тарифів користувачів.
-"""
 
-from typing import Dict, List
+import json
+import os
 
-# user_id -> "A" / "B" / "C" / "D"
-USER_TARIFFS: Dict[int, str] = {}
+DB_FILE = "db.json"
 
-# user_id -> state ("welcome", "course_info", "unsubscribed", ...)
-USER_STATE: Dict[int, str] = {}
-
-
-# ------------------ ТАРИФИ ------------------ #
-
-def set_tariff_for_user(user_id: int, tariff: str) -> None:
-    USER_TARIFFS[user_id] = tariff
+# Створюємо файл, якщо його немає
+if not os.path.exists(DB_FILE):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f)
 
 
-def get_tariff_for_user(user_id: int) -> str | None:
-    return USER_TARIFFS.get(user_id)
+def _load():
+    with open(DB_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-# ------------------ СТАНИ ------------------ #
-
-def set_user_state(user_id: int, state: str) -> None:
-    USER_STATE[user_id] = state
-
-
-def get_user_state(user_id: int) -> str | None:
-    return USER_STATE.get(user_id)
+def _save(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-# ------------------ UNSUBSCRIBE ------------------ #
+# ---------------------------------------------------
+#   СТАН КОРИСТУВАЧА (welcome / interested / unsubscribed)
+# ---------------------------------------------------
+def set_user_state(user_id: int, state: str):
+    db = _load()
+    user_id = str(user_id)
 
-def mark_unsubscribed(user_id: int) -> None:
-    """Позначає користувача як відписаного."""
-    set_user_state(user_id, "unsubscribed")
+    if user_id not in db:
+        db[user_id] = {}
+
+    db[user_id]["state"] = state
+    _save(db)
 
 
-def mark_resubscribed(user_id: int) -> None:
-    """Позначає користувача як знову активного."""
-    set_user_state(user_id, "welcome")
+def get_user_state(user_id: int):
+    db = _load()
+    return db.get(str(user_id), {}).get("state")
 
 
-# 🔥 ДЛЯ СТАРИХ ІМПОРТІВ (сумісність)
+# ---------------------------------------------------
+#   ТАРИФИ
+# ---------------------------------------------------
+def set_tariff_for_user(user_id: int, tariff: str):
+    db = _load()
+    user_id = str(user_id)
+
+    if user_id not in db:
+        db[user_id] = {}
+
+    db[user_id]["tariff"] = tariff
+    _save(db)
+
+
+def get_tariff_for_user(user_id: int):
+    db = _load()
+    return db.get(str(user_id), {}).get("tariff")
+
+
+# ---------------------------------------------------
+#   UNSUBSCRIBED LIST (для нагадувань)
+# ---------------------------------------------------
 def set_unsubscribed(user_id: int):
-    """Старе ім'я функції — залишаємо для уникнення помилок."""
-    mark_unsubscribed(user_id)
+    db = _load()
+    user_id = str(user_id)
+
+    if user_id not in db:
+        db[user_id] = {}
+
+    db[user_id]["unsubscribed"] = True
+    _save(db)
 
 
-# ------------------ РЕМАЙНДЕРИ ------------------ #
-
-def get_all_user_ids() -> List[int]:
-    ids = set(USER_TARIFFS.keys()) | set(USER_STATE.keys())
-    return list(ids)
-
-
-def get_unsubscribed_users() -> List[int]:
-    return [uid for uid, s in USER_STATE.items() if s == "unsubscribed"]
+def get_unsubscribed_user_ids():
+    db = _load()
+    return [int(uid) for uid, u in db.items() if u.get("unsubscribed")]
