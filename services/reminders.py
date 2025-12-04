@@ -1,50 +1,35 @@
-# file: services/reminders.py
-import asyncio
-from datetime import datetime, date
-from aiogram import Bot
+# services/reminders.py
 
-from services.storage import get_unsubscribed_user_ids
+import asyncio
+from aiogram import Bot
+from config import TOKEN
+
+from services.storage import (
+    get_unsubscribed_users,
+    get_all_user_ids,
+    get_user_state
+)
+
+REMINDER_TEXT = (
+    "👋 Ми все ще чекаємо на вас у FinanceForTeens!\n"
+    "💛 Поверніться, оберіть тариф та почніть шлях до фінансової свободи 💛"
+)
 
 
 async def reminders_loop(bot: Bot):
     """
-    Двічі на день (10:00 і 19:00) нагадуємо тим, хто відписався.
+    2 рази на добу нагадує тим, хто натиснув «Ні» (unsubscribed).
     """
-    last_morning: date | None = None
-    last_evening: date | None = None
-
     while True:
-        now = datetime.now()
-        today = now.date()
-        hour = now.hour
-        minute = now.minute
+        try:
+            unsubscribed = get_unsubscribed_users()
 
-        # Ранкове нагадування
-        if hour == 10 and minute == 0 and last_morning != today:
-            user_ids = get_unsubscribed_user_ids()
-            for uid in user_ids:
-                try:
-                    await bot.send_message(
-                        uid,
-                        "👋 Ми все ще чекаємо на вас у FinanceForTeens!\n"
-                        "💛Поверніться, оберіть тариф та почніть шлях до фінансової свободи 💛"
-                    )
-                except Exception as e:
-                    print("Reminder morning error for", uid, e)
-            last_morning = today
+            for user_id in unsubscribed:
+                await bot.send_message(user_id, REMINDER_TEXT)
 
-        # Вечірнє нагадування
-        if hour == 19 and minute == 0 and last_evening != today:
-            user_ids = get_unsubscribed_user_ids()
-            for uid in user_ids:
-                try:
-                    await bot.send_message(
-                        uid,
-                        "👋 Ми все ще чекаємо на вас у FinanceForTeens!\n"
-                        "💛Поверніться, оберіть тариф та почніть шлях до фінансової свободи 💛"
-                    )
-                except Exception as e:
-                    print("Reminder evening error for", uid, e)
-            last_evening = today
+            # 12 годин пауза
+            await asyncio.sleep(60 * 60 * 12)
 
-        await asyncio.sleep(30)
+        except Exception as e:
+            print("❌ REMINDER ERROR:", e)
+            await asyncio.sleep(60)  # пауза 1 хв, щоб не падати
