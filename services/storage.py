@@ -76,3 +76,6 @@ def set_unsubscribed(user_id: int):
 def get_unsubscribed_user_ids():
     db = _load()
     return [int(uid) for uid, u in db.items() if u.get("unsubscribed")]
+
+def get_unsubscribed_users():
+    return get_unsubscribed_user_ids()
