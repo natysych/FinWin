@@ -1,72 +1,82 @@
-# file: services/storage.py
-import json
-import os
+# services/storage.py
+"""
+Просте in-memory сховище станів та тарифів користувачів.
 
-DATA_DIR = "data"
-FILE_PATH = os.path.join(DATA_DIR, "users.json")
+⚠ ВАЖЛИВО: це все зберігається тільки в пам'яті контейнера Railway.
+Після перезапуску дані зникають — для продакшену пізніше підключимо
+Google Sheets або PostgreSQL.
+"""
 
+from typing import Dict, List
 
-def _load():
-    if not os.path.exists(FILE_PATH):
-        return {}
-    try:
-        with open(FILE_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+# user_id -> "A" / "B" / "C" / "D"
+USER_TARIFFS: Dict[int, str] = {}
 
-
-def _save(data: dict):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+# user_id -> state string ("welcome", "course_info", "unsubscribed", ...)
+USER_STATE: Dict[int, str] = {}
 
 
-# ------- UNSUBSCRIBE -------
+# ------------------ ТАРИФИ ------------------ #
 
-def set_unsubscribed(user_id: int, value: bool):
-    data = _load()
-    uid = str(user_id)
-    user = data.get(uid, {})
-    user["unsubscribed"] = value
-    data[uid] = user
-    _save(data)
+def set_tariff_for_user(user_id: int, tariff: str) -> None:
+    """
+    Зберігає вибраний тариф для користувача.
+    """
+    USER_TARIFFS[user_id] = tariff
 
 
-def get_unsubscribed_user_ids():
-    data = _load()
-    return [int(uid) for uid, user in data.items() if user.get("unsubscribed")]
+def get_tariff_for_user(user_id: int) -> str | None:
+    """
+    Повертає тариф користувача або None, якщо ще не обрали.
+    """
+    return USER_TARIFFS.get(user_id)
 
 
-# ------- TARIFF -------
+# ------------------ СТАНИ ------------------ #
 
-def set_tariff_for_user(user_id: int, tariff: str):
-    data = _load()
-    uid = str(user_id)
-    user = data.get(uid, {})
-    user["tariff"] = tariff
-    data[uid] = user
-    _save(data)
+def set_user_state(user_id: int, state: str) -> None:
+    """
+    Зберігає поточний стан користувача (welcome / course_info / unsubscribed / ...).
+    """
+    USER_STATE[user_id] = state
 
 
-def get_tariff_for_user(user_id: int):
-    data = _load()
-    uid = str(user_id)
-    return data.get(uid, {}).get("tariff")
+def get_user_state(user_id: int) -> str | None:
+    """
+    Повертає стан користувача або None, якщо стан ще не встановлений.
+    """
+    return USER_STATE.get(user_id)
 
 
-# ------- STEP (етап /start) -------
+# ------------------ ДЛЯ НАГАДУВАНЬ ------------------ #
 
-def set_step_for_user(user_id: int, step: int):
-    data = _load()
-    uid = str(user_id)
-    user = data.get(uid, {})
-    user["step"] = step
-    data[uid] = user
-    _save(data)
+def get_all_user_ids() -> List[int]:
+    """
+    Повертає список усіх користувачів, про яких ми щось знаємо
+    (або тариф, або стан).
+    """
+    ids = set(USER_TARIFFS.keys()) | set(USER_STATE.keys())
+    return list(ids)
 
 
-def get_step_for_user(user_id: int) -> int:
-    data = _load()
-    uid = str(user_id)
-    return int(data.get(uid, {}).get("step", 0))
+def get_unsubscribed_users() -> List[int]:
+    """
+    Список користувачів, які зараз у стані 'unsubscribed'.
+    Використовується в reminders_loop.
+    """
+    return [uid for uid, state in USER_STATE.items() if state == "unsubscribed"]
+
+
+def mark_unsubscribed(user_id: int) -> None:
+    """
+    Позначити користувача як відписаного.
+    """
+    set_user_state(user_id, "unsubscribed")
+
+
+def mark_resubscribed(user_id: int) -> None:
+    """
+    Користувач знову активний (після /start).
+    """
+    # Наприклад, повертаємо у стан 'welcome'
+    set_user_state(user_id, "welcome")
