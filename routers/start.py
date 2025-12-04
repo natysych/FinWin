@@ -1,96 +1,75 @@
-# file: routers/start.py
 from aiogram import Router, types
 from aiogram.filters import Command
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-from keyboards.pay_kb import payment_keyboard
-from services.storage import (
-    set_unsubscribed,
-    set_step_for_user,
-    get_step_for_user,
-)
+from services.storage import set_user_state
 
 router = Router()
 
 
-def yes_no_keyboard() -> types.ReplyKeyboardMarkup:
-    return types.ReplyKeyboardMarkup(
+# Кнопки Так / Ні
+def yes_no_keyboard():
+    return ReplyKeyboardMarkup(
         keyboard=[
-            [
-                types.KeyboardButton(text="Так"),
-                types.KeyboardButton(text="Ні / unsubscribe"),
-            ]
+            [KeyboardButton(text="Так")],
+            [KeyboardButton(text="Ні")]
         ],
-        resize_keyboard=True,
+        resize_keyboard=True
     )
 
 
+# ----------------------------------------
+# /start
+# ----------------------------------------
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
-    user_id = message.from_user.id
-
-    # Користувач знову активний
-    set_unsubscribed(user_id, False)
-    set_step_for_user(user_id, 1)
 
     text = (
-        "Вітаємо!\n"
-        "Ви підписалися на бот FinanceForTeens!\n"
-        "Це курс з фінансової грамотності. Він створений для тих мрійників, "
-        "хто потребує додаткових знань та систематизації дій на шляху до реалізації своїх ідей!\n\n"
+        "👋 *Вітаємо!*\n"
+        "Ви підписалися на бот *FinanceForTeens*! \n"
+        "Це курс з фінансової грамотності. Він створений для мрійників, "
+        "яким потрібна структура та знання, аби реалізувати свої ідеї!\n\n"
         "Ну як, цікаво?"
     )
 
-    await message.answer(text, reply_markup=yes_no_keyboard())
+    # зберігаємо статус користувача
+    set_user_state(message.from_user.id, "welcome")
 
-
-@router.message(lambda m: m.text == "Так")
-async def handle_yes(message: types.Message):
-    user_id = message.from_user.id
-    step = get_step_for_user(user_id)
-
-    # Крок 1 → показуємо опис курсу
-    if step <= 1:
-        set_step_for_user(user_id, 2)
-
-        text = (
-            "Курс розрахований на підлітків 14–19 років. "
-            "У ньому поєднані фінансова грамотність, основи підприємництва, логіка та психологія.\n\n"
-            "Заняття побудовані у форматі «від простого до складного», щоб допомогти:\n"
-            "• зрозуміти свої цілі\n"
-            "• побачити шлях їх досягнення\n"
-            "• надихнутися історіями успішних людей\n\n"
-            "Продовжимо?"
-        )
-
-        await message.answer(text, reply_markup=yes_no_keyboard())
-        return
-
-    # Крок 2 і далі → показуємо тарифи
-    await send_tariffs(message)
-
-
-async def send_tariffs(message: types.Message):
-    text = (
-        "👇 У нас є декілька форматів, оберіть той, що підходить вам найбільше. "
-        "Після оплати ми попросимо заповнити анкету та надішлемо доступ до курсу.\n\n"
-        "A) Повна оплата — 1500 грн. Курс з 12 уроків, доступ назавжди.\n\n"
-        "B) Оплата частинами. 800 грн, доступ до перших 6 уроків відкриється одразу після платежу.\n\n"
-        "C) PRO доступ. 2000 грн. Доступ до всього курсу + менторський супровід 1 місяць!\n\n"
-        "D) MAX-програма. 3490 грн. 6-місячна програма + додаткові модулі + спільнота + фідбек!\n"
+    await message.answer(
+        text,
+        reply_markup=yes_no_keyboard(),
+        parse_mode="Markdown"
     )
 
-    await message.answer(text, reply_markup=types.ReplyKeyboardRemove())
-    await message.answer("Оберіть тариф:", reply_markup=payment_keyboard())
+
+# ----------------------------------------
+# Якщо користувач натискає «Так»
+# ----------------------------------------
+@router.message(lambda m: m.text == "Так")
+async def user_yes(message: types.Message):
+
+    state = set_user_state(message.from_user.id, "interested")
+
+    text = (
+        "Курс розрахований на підлітків 14–19 років.\n"
+        "У ньому поєднані фінансова грамотність, підприємництво, логіка та психологія.\n\n"
+        "Готові продовжити?"
+    )
+
+    await message.answer(
+        text,
+        reply_markup=yes_no_keyboard()
+    )
 
 
-@router.message(lambda m: m.text == "Ні / unsubscribe")
-async def handle_no(message: types.Message):
-    from services.storage import set_unsubscribed
-
-    user_id = message.from_user.id
-    set_unsubscribed(user_id, True)
+# ----------------------------------------
+# Якщо натиснули «Ні»
+# ----------------------------------------
+@router.message(lambda m: m.text == "Ні")
+async def user_no(message: types.Message):
+    set_user_state(message.from_user.id, "unsubscribed")
 
     await message.answer(
         "Добре! Якщо передумаєте — просто напишіть /start 😊",
-        reply_markup=types.ReplyKeyboardRemove(),
+        reply_markup=types.ReplyKeyboardRemove()
     )
