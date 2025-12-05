@@ -2,8 +2,9 @@ import asyncio
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-from config import TOKEN, WEBAPP_HOST, WEBAPP_PORT
+from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
 # Routers
 from routers.start import router as start_router
@@ -13,7 +14,7 @@ from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
 
-# Background tasks
+# Background workers
 from services.reminders import reminders_loop
 
 
@@ -21,7 +22,7 @@ async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Commands
+    # Bot commands
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інформація"),
@@ -36,18 +37,23 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # Web server only for LiqPay callback
+    # AIOHTTP Web App
     app = web.Application()
+
+    # LiqPay callback
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Background reminders
+    # Telegram webhook handler
+    SimpleRequestHandler(dp, bot).register(app, path="/webhook")
+    setup_application(app, dp, bot=bot)
+
+    # Install webhook
+    await bot.set_webhook(WEBHOOK_URL)
+    print("🔗 Webhook installed:", WEBHOOK_URL)
+
+    # Start reminders loop
     asyncio.create_task(reminders_loop(bot))
-
-    # Run Telegram polling in background
-    asyncio.create_task(dp.start_polling(bot))
-
-    print("🤖 BOT STARTED IN LONG POLLING MODE")
-    print("🌐 LiqPay callback enabled at /payment/callback")
+    print("⏰ Background workers started")
 
     return app
 
