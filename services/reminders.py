@@ -1,13 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta
 from aiogram import Bot
 
-from config import TOKEN
 from services.storage import (
     get_unsubscribed_user_ids,
     get_user_state,
 )
-
 
 REMINDER_TEXT = (
     "👋 Ми все ще чекаємо на вас у FinanceForTeens!\n"
@@ -27,21 +24,19 @@ async def reminders_loop(bot: Bot):
 
     while True:
         try:
-            # 1) Отримуємо всіх користувачів, які натиснули «Ні»
+            # 1) Користувачі, які натиснули «Ні»
             unsubscribed = get_unsubscribed_user_ids()
-
             print("🔍 Unsubscribed users:", unsubscribed)
 
             for user_id in unsubscribed:
-
-                # 2) Перевіряємо, чи не змінив користувач статус
+                # 2) Раптом він уже повернувся / змінився стан
                 state = get_user_state(user_id)
                 if state != "unsubscribed":
                     continue
 
                 await send_reminder(bot, user_id)
 
-            # 3) Чекаємо 12 годин
+            # 3) Чекаємо 12 годин (2 рази на добу)
             await asyncio.sleep(60 * 60 * 12)
 
         except Exception as e:
