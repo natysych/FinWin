@@ -21,12 +21,14 @@ async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
+    # Команди
     await bot.set_my_commands([
         BotCommand(command="start", description="Почати"),
         BotCommand(command="info", description="Інформація"),
         BotCommand(command="survey", description="Анкета"),
     ])
 
+    # Роутери
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -34,22 +36,25 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # ONLY LiqPay callback server
+    # Aiohttp-сервер тільки для LiqPay callback
     app = web.Application()
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Start background reminder loop
+    # Фонова задача з нагадуваннями
     asyncio.create_task(reminders_loop(bot))
 
-    # Start Telegram polling
+    # Запускаємо long polling у фоні
     asyncio.create_task(dp.start_polling(bot))
-    print("🤖 Bot running in LONG POLLING mode")
+
+    print("🤖 BOT STARTED IN LONG POLLING MODE")
+    print("🌐 LiqPay callback enabled at /payment/callback")
 
     return app
 
 
 def main():
-    app = asyncio.get_event_loop().run_until_complete(init_app())
+    loop = asyncio.get_event_loop()
+    app = loop.run_until_complete(init_app())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
