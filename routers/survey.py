@@ -1,4 +1,3 @@
-# file: routers/survey.py
 from aiogram import Router, types
 from aiogram.filters import Command
 
@@ -20,13 +19,14 @@ COURSE_LINKS = {
 async def survey_start(message: types.Message):
     await message.answer(
         "🎉 Оплату отримано!\n"
-        "Тепер заповніть анкету, щоб ми могли створити ще краще продукт для вас!\n\n"
+        "Тепер заповніть анкету, щоб ми могли створити ще кращий продукт для вас!\n\n"
         f"📝 Анкета: {SURVEY_LINK}\n\n"
         "Коли заповните — натисніть *Готово*.",
         reply_markup=types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text="Готово")]],
             resize_keyboard=True,
         ),
+        parse_mode="Markdown",
     )
 
 
