@@ -1,81 +1,29 @@
-# services/storage.py
+from typing import Dict, List, Optional
 
-import json
-import os
-
-DB_FILE = "db.json"
-
-# Створюємо файл, якщо його немає
-if not os.path.exists(DB_FILE):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f)
+# Просте in-memory сховище (на перший час)
+_user_states: Dict[int, str] = {}
+_user_tariffs: Dict[int, str] = {}
 
 
-def _load():
-    with open(DB_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+def set_user_state(user_id: int, state: str) -> None:
+    _user_states[user_id] = state
 
 
-def _save(data):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def get_user_state(user_id: int) -> Optional[str]:
+    return _user_states.get(user_id)
 
 
-# ---------------------------------------------------
-#   СТАН КОРИСТУВАЧА (welcome / interested / unsubscribed)
-# ---------------------------------------------------
-def set_user_state(user_id: int, state: str):
-    db = _load()
-    user_id = str(user_id)
-
-    if user_id not in db:
-        db[user_id] = {}
-
-    db[user_id]["state"] = state
-    _save(db)
+def set_unsubscribed(user_id: int) -> None:
+    _user_states[user_id] = "unsubscribed"
 
 
-def get_user_state(user_id: int):
-    db = _load()
-    return db.get(str(user_id), {}).get("state")
+def get_unsubscribed_user_ids() -> List[int]:
+    return [uid for uid, state in _user_states.items() if state == "unsubscribed"]
 
 
-# ---------------------------------------------------
-#   ТАРИФИ
-# ---------------------------------------------------
-def set_tariff_for_user(user_id: int, tariff: str):
-    db = _load()
-    user_id = str(user_id)
-
-    if user_id not in db:
-        db[user_id] = {}
-
-    db[user_id]["tariff"] = tariff
-    _save(db)
+def set_tariff_for_user(user_id: int, tariff: str) -> None:
+    _user_tariffs[user_id] = tariff
 
 
-def get_tariff_for_user(user_id: int):
-    db = _load()
-    return db.get(str(user_id), {}).get("tariff")
-
-
-# ---------------------------------------------------
-#   UNSUBSCRIBED LIST (для нагадувань)
-# ---------------------------------------------------
-def set_unsubscribed(user_id: int):
-    db = _load()
-    user_id = str(user_id)
-
-    if user_id not in db:
-        db[user_id] = {}
-
-    db[user_id]["unsubscribed"] = True
-    _save(db)
-
-
-def get_unsubscribed_user_ids():
-    db = _load()
-    return [int(uid) for uid, u in db.items() if u.get("unsubscribed")]
-
-def get_unsubscribed_users():
-    return get_unsubscribed_user_ids()
+def get_tariff_for_user(user_id: int) -> Optional[str]:
+    return _user_tariffs.get(user_id)
