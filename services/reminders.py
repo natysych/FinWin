@@ -24,19 +24,17 @@ async def reminders_loop(bot: Bot):
 
     while True:
         try:
-            # 1) Користувачі, які натиснули «Ні»
             unsubscribed = get_unsubscribed_user_ids()
             print("🔍 Unsubscribed users:", unsubscribed)
 
             for user_id in unsubscribed:
-                # 2) Раптом він уже повернувся / змінився стан
                 state = get_user_state(user_id)
                 if state != "unsubscribed":
                     continue
 
                 await send_reminder(bot, user_id)
 
-            # 3) Чекаємо 12 годин (2 рази на добу)
+            # чекати 12 годин
             await asyncio.sleep(60 * 60 * 12)
 
         except Exception as e:
