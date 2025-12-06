@@ -3,7 +3,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 
-from config import TOKEN, WEBAPP_HOST, WEBAPP_PORT
+from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
 # Routers
 from routers.start import router as start_router
@@ -13,13 +13,13 @@ from routers.survey import router as survey_router
 from routers.offer import router as offer_router
 from routers.unsubscribe import router as unsubscribe_router
 
-# Background tasks
+# Background reminders
 from services.reminders import reminders_loop
 
 
-async def init_app():
-    bot = Bot(token=TOKEN)
-    dp = Dispatcher()
+async def on_startup(bot: Bot):
+    # Встановлюємо webhook
+    await bot.set_webhook(WEBHOOK_URL)
 
     # Команди
     await bot.set_my_commands([
@@ -28,7 +28,14 @@ async def init_app():
         BotCommand(command="survey", description="Анкета"),
     ])
 
-    # Роутери
+    print(f"🔗 Webhook set: {WEBHOOK_URL}")
+
+
+async def init_app():
+    bot = Bot(token=TOKEN)
+    dp = Dispatcher()
+
+    # Routers
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -36,25 +43,32 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # Aiohttp-сервер тільки для LiqPay callback
+    # HTTP сервер
     app = web.Application()
+
+    # Telegram webhook endpoint
+    async def telegram_webhook(request: web.Request):
+        data = await request.json()
+        update = dp.update_handler.bot_update_class.model_validate(data)
+        await dp.feed_update(bot, update)
+        return web.Response()
+
+    app.router.add_post("/webhook", telegram_webhook)
+
+    # LiqPay callback endpoint
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # Фонова задача з нагадуваннями
+    # Background reminders
     asyncio.create_task(reminders_loop(bot))
 
-    # Запускаємо long polling у фоні
-    asyncio.create_task(dp.start_polling(bot))
-
-    print("🤖 BOT STARTED IN LONG POLLING MODE")
-    print("🌐 LiqPay callback enabled at /payment/callback")
+    # On startup
+    app.on_startup.append(lambda _: on_startup(bot))
 
     return app
 
 
 def main():
-    loop = asyncio.get_event_loop()
-    app = loop.run_until_complete(init_app())
+    app = asyncio.run(init_app())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
