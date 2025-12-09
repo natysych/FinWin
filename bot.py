@@ -1,7 +1,7 @@
 import asyncio
 from aiohttp import web
 from aiogram import Bot, Dispatcher
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, Update
 
 from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
 
@@ -17,9 +17,6 @@ from routers.unsubscribe import router as unsubscribe_router
 from services.reminders import reminders_loop
 
 
-# ------------------------------------------------------
-# 🔧 Запуск при старті: встановлюємо webhook, команди
-# ------------------------------------------------------
 async def on_startup(bot: Bot):
     await bot.set_webhook(WEBHOOK_URL)
 
@@ -32,14 +29,11 @@ async def on_startup(bot: Bot):
     print(f"🔗 Webhook successfully set: {WEBHOOK_URL}")
 
 
-# ------------------------------------------------------
-# 🌐 Ініціалізація AIOHTTP + Aiogram
-# ------------------------------------------------------
 async def init_app():
     bot = Bot(token=TOKEN)
     dp = Dispatcher()
 
-    # Підключаємо всі маршрути
+    # Register routers
     dp.include_router(start_router)
     dp.include_router(payments_router)
     dp.include_router(info_router)
@@ -47,41 +41,32 @@ async def init_app():
     dp.include_router(offer_router)
     dp.include_router(unsubscribe_router)
 
-    # AIOHTTP app
+    # aiohttp app
     app = web.Application()
 
-    # ---------------------------
-    # Telegram Webhook endpoint
-    # ---------------------------
+    # Telegram webhook endpoint
     async def telegram_webhook(request: web.Request):
         data = await request.json()
-        update = dp.update_handler.bot_update_class.model_validate(data)
-        await dp.feed_update(bot, update)
-        return web.Response()
+        update = Update.model_validate(data)
+
+        await dp.feed_webhook_update(bot, update)
+        return web.Response(text="OK")
 
     app.router.add_post("/webhook", telegram_webhook)
 
-    # ---------------------------
-    # LiqPay callback endpoint
-    # ---------------------------
+    # LiqPay callback
     app.router.add_post("/payment/callback", liqpay_callback)
 
-    # ---------------------------
-    # Background reminders
-    # ---------------------------
+    # Start background reminders
     asyncio.create_task(reminders_loop(bot))
 
-    # Startup hook — встановлюємо webhook
+    # Startup hook
     app.on_startup.append(lambda _: on_startup(bot))
 
     print("🚀 Application initialized. Awaiting Telegram updates...")
-
     return app
 
 
-# ------------------------------------------------------
-# 🚀 Запуск сервера
-# ------------------------------------------------------
 def main():
     app = asyncio.run(init_app())
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
