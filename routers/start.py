@@ -1,22 +1,28 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
 from services.storage import set_user_state
 
 router = Router()
 
 
-def yes_no_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Так")],
-            [KeyboardButton(text="Ні")],
-        ],
-        resize_keyboard=True,
-    )
+# ---------------------------
+# INLINE КНОПКИ "Так / Ні"
+# ---------------------------
+def yes_no_inline_keyboard():
+    keyboard = [
+        [
+            InlineKeyboardButton(text="Так", callback_data="yes"),
+            InlineKeyboardButton(text="Ні", callback_data="no"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
+# ---------------------------
+# ХЕНДЛЕР /start
+# ---------------------------
 @router.message(Command("start"))
 async def start_cmd(message: types.Message):
     text = (
@@ -31,14 +37,18 @@ async def start_cmd(message: types.Message):
 
     await message.answer(
         text,
-        reply_markup=yes_no_keyboard(),
+        reply_markup=yes_no_inline_keyboard(),
         parse_mode="Markdown",
     )
 
 
-@router.message(lambda m: m.text == "Так")
-async def user_yes(message: types.Message):
-    set_user_state(message.from_user.id, "interested")
+# ---------------------------
+# КОРИСТУВАЧ НАТИСНУВ "ТАК"
+# ---------------------------
+@router.callback_query(F.data == "yes")
+async def user_yes(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    set_user_state(user_id, "interested")
 
     text = (
         "Курс розрахований на підлітків 14–19 років.\n"
@@ -50,17 +60,22 @@ async def user_yes(message: types.Message):
         "Продовжимо?"
     )
 
-    await message.answer(
+    await callback.answer()
+    await callback.message.answer(
         text,
-        reply_markup=yes_no_keyboard(),
+        reply_markup=yes_no_inline_keyboard(),
     )
 
 
-@router.message(lambda m: m.text == "Ні")
-async def user_no(message: types.Message):
-    set_user_state(message.from_user.id, "unsubscribed")
+# ---------------------------
+# КОРИСТУВАЧ НАТИСНУВ "НІ"
+# ---------------------------
+@router.callback_query(F.data == "no")
+async def user_no(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    set_user_state(user_id, "unsubscribed")
 
-    await message.answer(
-        "Добре! Якщо передумаєте — просто напишіть /start 😊",
-        reply_markup=types.ReplyKeyboardRemove(),
+    await callback.answer()
+    await callback.message.answer(
+        "Добре! Якщо передумаєте — просто напишіть /start 😊"
     )
