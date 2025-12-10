@@ -1,76 +1,81 @@
-import asyncio
-from aiohttp import web
-from aiogram import Bot, Dispatcher
-from aiogram.types import BotCommand, Update
+from aiogram import Router, types, F
+from aiogram.filters import Command
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
-from config import TOKEN, WEBHOOK_URL, WEBAPP_HOST, WEBAPP_PORT
+from services.storage import set_user_state
 
-# Routers
-from routers.start import router as start_router
-from routers.payments import router as payments_router, liqpay_callback
-from routers.info import router as info_router
-from routers.survey import router as survey_router
-from routers.offer import router as offer_router
-from routers.unsubscribe import router as unsubscribe_router
-
-# Background reminders
-from services.reminders import reminders_loop
+router = Router()
 
 
-async def on_startup(bot: Bot):
-    await bot.set_webhook(WEBHOOK_URL)
-
-    await bot.set_my_commands([
-        BotCommand(command="start", description="Почати"),
-        BotCommand(command="info", description="Інформація"),
-        BotCommand(command="survey", description="Анкета"),
-    ])
-
-    print(f"🔗 Webhook successfully set: {WEBHOOK_URL}")
-
-
-async def init_app():
-    bot = Bot(token=TOKEN)
-    dp = Dispatcher()
-
-    # Register routers
-    dp.include_router(start_router)
-    dp.include_router(payments_router)
-    dp.include_router(info_router)
-    dp.include_router(survey_router)
-    dp.include_router(offer_router)
-    dp.include_router(unsubscribe_router)
-
-    # aiohttp app
-    app = web.Application()
-
-    # Telegram webhook endpoint
-    async def telegram_webhook(request: web.Request):
-        data = await request.json()
-        update = Update.model_validate(data)
-
-        await dp.feed_webhook_update(bot, update)
-        return web.Response(text="OK")
-
-    app.router.add_post("/webhook", telegram_webhook)
-
-    # LiqPay callback
-    app.router.add_post("/payment/callback", liqpay_callback)
-
-    # Start background reminders
-    asyncio.create_task(reminders_loop(bot))
-
-    # Startup hook
-    app.on_startup.append(lambda _: on_startup(bot))
-
-    print("🚀 Application initialized. Awaiting Telegram updates...")
-    return app
+# ---------------------------
+# INLINE КНОПКИ "Так / Ні"
+# ---------------------------
+def yes_no_inline_keyboard():
+    keyboard = [
+        [
+            InlineKeyboardButton(text="Так", callback_data="yes"),
+            InlineKeyboardButton(text="Ні", callback_data="no"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def main():
-    app = asyncio.run(init_app())
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+# ---------------------------
+# ХЕНДЛЕР /start
+# ---------------------------
+@router.message(Command("start"))
+async def start_cmd(message: types.Message):
+    text = (
+        "👋 *Вітаємо!*\n"
+        "Ви підписалися на бот *FinanceForTeens*! \n"
+        "Це курс з фінансової грамотності. Він створений для тих мрійників, "
+        "хто потребує додаткових знань та систематизації дій на шляху до реалізації своїх ідей!\n\n"
+        "Ну як, цікаво?"
+    )
+
+    set_user_state(message.from_user.id, "welcome")
+
+    await message.answer(
+        text,
+        reply_markup=yes_no_inline_keyboard(),
+        parse_mode="Markdown",
+    )
 
 
-if __name__ == "__main__":
-    main()
+# ---------------------------
+# КОРИСТУВАЧ НАТИСНУВ "ТАК"
+# ---------------------------
+@router.callback_query(F.data == "yes")
+async def user_yes(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    set_user_state(user_id, "interested")
+
+    text = (
+        "Курс розрахований на підлітків 14–19 років.\n"
+        "У ньому поєднані фінансова грамотність, основи підприємництва, логіка та психологія.\n\n"
+        "Заняття побудовані у форматі «від простого до складного», щоб допомогти:\n"
+        "• зрозуміти свої цілі\n"
+        "• побачити шлях їх досягнення\n"
+        "• надихнутися історіями успішних людей\n\n"
+        "Продовжимо?"
+    )
+
+    await callback.answer()
+    await callback.message.answer(
+        text,
+        reply_markup=yes_no_inline_keyboard(),
+    )
+
+
+# ---------------------------
+# КОРИСТУВАЧ НАТИСНУВ "НІ"
+# ---------------------------
+@router.callback_query(F.data == "no")
+async def user_no(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    set_user_state(user_id, "unsubscribed")
+
+    await callback.answer()
+    await callback.message.answer(
+        "Добре! Якщо передумаєте — просто напишіть /start 😊"
+    )
